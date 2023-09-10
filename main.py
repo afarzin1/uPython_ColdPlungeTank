@@ -236,6 +236,7 @@ while True:
         except:
             picodebug.logPrint("Get temp failed")         
 
+    #Slow loop
     if CycleLoopCounter == 100:
         #Look for firmware updates
         picodebug.logPrint("Entering Slow Loop")
