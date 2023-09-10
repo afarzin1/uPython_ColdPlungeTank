@@ -1,6 +1,8 @@
 import time, picodebug, mySecrets
 from machine import Pin
 
+time.sleep(1)
+
 ver="1.06"
 devMode = 0
 
@@ -10,7 +12,7 @@ picodebug.logPrint("Initializing")
 #turn on LED for first-scan
 pin = Pin("LED", Pin.OUT)
 pin.on()
-time.sleep(2)
+
 
 picodebug.logPrint("Importing libs")
 import network,time,urequests,json, ntptime
@@ -45,7 +47,7 @@ coolStartMin = 0
 coolEndMin = 0
 
 state = 'idle'
-remoteTerminal = "Booting up v" + ver + "\n"
+remoteTerminal = "\nBooting up v" + ver + "\n"
 
 #Initialize weather look parameters
 weather_api_key = mySecrets.myWeatherAPI
@@ -195,7 +197,7 @@ blynk = blynklib.Blynk(BLYNK_AUTH)
 @blynk.on("V*")
 def read_handler(pin, value):
     picodebug.logPrint("Blynk read handler called")
-    global icepacks_added, coolingActive, waterSetpoint, consoleLog
+    global icepacks_added, coolingActive, waterSetpoint, remoteTerminal
 
     if pin == '2':
         icepacks_added = value[0]
@@ -204,7 +206,7 @@ def read_handler(pin, value):
         coolingActive = value[0]
         #print("Cooling active is " + value[0])
     if pin =='5':
-        consoleLog = value[0]
+        remoteTerminal = value[0]
         #print("Conole log: " + value[0])
     if pin == '6':
         waterSetpoint = value[0]

@@ -6,6 +6,7 @@ import machine
 from time import sleep
 import gc
 import micropython
+import picodebug
 
 class OTAUpdater:
     """ This class handles OTA updates. It connects to the Wi-Fi, checks for updates, downloads and installs them."""
@@ -23,7 +24,8 @@ class OTAUpdater:
         if 'version.json' in uos.listdir():    
             with open('version.json') as f:
                 self.current_version = json.load(f)['version']
-            print(f"Current device firmware version is '{self.current_version}'")
+            picodebug.logPrint(f"Current device firmware version is '{self.current_version}'")
+            #print(f"Current device firmware version is '{self.current_version}'")
 
         else:
             self.current_version = "0"
@@ -48,7 +50,8 @@ class OTAUpdater:
         print(self.firmware_url)
         response = urequests.get(self.firmware_url, stream=True)
         if response.status_code == 200:
-            print(f'Fetching latest firmware code, status: {response.status_code}')
+            picodebug.logPrint(f'Fetching latest firmware code, status: {response.status_code}')
+            #print(f'Fetching latest firmware code, status: {response.status_code}')
             chunk_size = 512
             try:
                 with open('latest_code.py', 'wb') as f:
@@ -60,7 +63,8 @@ class OTAUpdater:
                             sleep(0.5)
                         else:
                             break
-                print(f"Download complete")
+                picodebug.logPrint(f"Download complete")
+                #print(f"Download complete")
                 f.close()
                 sleep(5)
                 return True
@@ -93,7 +97,8 @@ class OTAUpdater:
         #uos.rename('latest_code.py', self.filename)  
 
         # Restart the device to run the new code.
-        print("Restarting device... (don't worry about an error message after this")
+        picodebug.logPrint('Restarting')
+        #print("Restarting device... (don't worry about an error message after this")
         sleep(0.25)
         #machine.reset()  # Reset the device to run the new code.
         machine.soft_reset()
@@ -136,15 +141,18 @@ class OTAUpdater:
     def check_for_updates(self):
         """ Check if updates are available."""
         
-        print('Checking for latest version...')
+        picodebug.logPrint("Checking for latest version...")
        
         self.latest_version = self.getLatestVersion()
-        print(f'latest version is: {self.latest_version}')
+        picodebug.logPrint(f'latest version is: {self.latest_version}')
+        #print(f'latest version is: {self.latest_version}')
         
         # compare versions
         newer_version_available = True if self.current_version != self.latest_version else False
         
-        print(f'Newer version available: {newer_version_available}')    
+        picodebug.logPrint(f'Newer version available: {newer_version_available}')
+        #print(f'Newer version available: {newer_version_available}')
+            
         return newer_version_available
     
     def download_and_install_update_if_available(self):
@@ -156,4 +164,4 @@ class OTAUpdater:
                 self.update_no_reset()
                 self.update_and_reset()
         else:
-            print('No new updates available.')
+            picodebug.logPrint("No new updates available")
