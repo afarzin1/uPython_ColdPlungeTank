@@ -2,7 +2,7 @@ import time, picodebug, mySecrets
 from machine import Pin
 from ota import OTAUpdater
 
-ver="1.01"
+ver="1.02"
 
 print("Initializing...")
 picodebug.logPrint("Initializing")
@@ -121,9 +121,6 @@ lon = mySecrets.lon
 picodebug.logPrint("Initial Wifi call")
 ConnectWifi(1)
 
-picodebug.logPrint("Initial weather check")
-ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
-
 picodebug.logPrint("Initialize Blynk")
 blynk = blynklib.Blynk(BLYNK_AUTH)
 
@@ -169,25 +166,30 @@ while True:
     WaterTempSamples.append(temp_calibrated)
     #print(temp_calibrated)
 
-    #Slow loop - Do these actions at a reduced rate compared main loop
-    if CycleLoopCounter == 10:
-        picodebug.logPrint("Entering 10th loop")
+    #Medium loop - Do these actions at a reduced rate compared main loop
+    if (CycleLoopCounter % 10) == 0:
+        picodebug.logPrint("Entering Medium Loop")
         #Average out 10, 1s samples of water and post that to blynk
         WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
         water_temperature = WaterTempAverage
         
         #Get new ambient air data from API
         picodebug.logPrint("Get ambient temp")
-        ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
+        try:
+            ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
+        except:
+            picodebug.logPrint("Get temp failed")         
 
+    if CycleLoopCounter == 100:
         #Look for firmware updates
+        picodebug.logPrint("Entering Slow Loop")
         picodebug.logPrint("Checking for firmware updates...")
         firmware_url = "github.com/repos/afarzin1/uPython_ColdPlungeTank"
         ota_updater = OTAUpdater("coldPlungeTank",firmware_url, "main.py")
         ota_updater.download_and_install_update_if_available()
-
+        
         CycleLoopCounter = 0
-
+    
     if waterSetpoint != '':
         picodebug.logPrint("Calculate ice packs")
         number_of_ice_packs = calculate_ice_packs(water_temperature, int(waterSetpoint))
@@ -228,7 +230,10 @@ while True:
     #blynk.log_event("cooling_started")
     
     picodebug.logPrint("Run Blynk")
-    blynk.run()
+    try:
+        blynk.run()
+    except:
+        picodebug.logPrint("Run Blynk failed")
 
     CycleLoopCounter +=1
     firstScan = 1
