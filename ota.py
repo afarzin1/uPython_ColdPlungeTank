@@ -1,24 +1,26 @@
 import network
 import urequests
-import os
+import uos
 import json
 import machine
 from time import sleep
+import gc
+import micropython
 
 class OTAUpdater:
     """ This class handles OTA updates. It connects to the Wi-Fi, checks for updates, downloads and installs them."""
-    def __init__(self, ssid, password, repo_url, filename):
+    def __init__(self, deviceName, repo_url, filename):
+        self.deviceName = deviceName
         self.filename = filename
-        self.ssid = ssid
-        self.password = password
         self.repo_url = repo_url
 
-        # self.version_url = repo_url + 'main/version.json'                 # Replacement of the version mechanism by Github's oid
-        self.version_url = self.process_version_url(repo_url, filename)     # Process the new version url
-        self.firmware_url = repo_url + filename                             # Removal of the 'main' branch to allow different sources
+        #self.version_url = self.getLatestVersion()
+        #self.version_url = self.process_version_url(repo_url, filename)            # Process the new version url
+        fileURL = "https://raw.githubusercontent.com/" + repo_url + "/main/" + filename
+        self.firmware_url = fileURL.replace("github.com/repos/","")                            # Removal of the 'main' branch to allow different sources
 
         # get the current version (stored in version.json)
-        if 'version.json' in os.listdir():    
+        if 'version.json' in uos.listdir():    
             with open('version.json') as f:
                 self.current_version = json.load(f)['version']
             print(f"Current device firmware version is '{self.current_version}'")
@@ -40,40 +42,33 @@ class OTAUpdater:
         version_url = version_url + filename                                       # Add the targeted filename
         
         return version_url
-
-    def connect_wifi(self):
-        """ Connect to Wi-Fi."""
-
-        sta_if = network.WLAN(network.STA_IF)
-        sta_if.active(True)
-        sta_if.connect(self.ssid, self.password)
-        while not sta_if.isconnected():
-            print('.', end="")
-            sleep(0.25)
-        print(f'Connected to WiFi, IP is: {sta_if.ifconfig()[0]}')
         
-    def fetch_latest_code(self)->bool:
-        """ Fetch the latest code from the repo, returns False if not found."""
-        
+    def fetch_latest_code(self)->bool:     
         # Fetch the latest code from the repo.
-        response = urequests.get(self.firmware_url)
+        print(self.firmware_url)
+        response = urequests.get(self.firmware_url, stream=True)
         if response.status_code == 200:
-            print(f'Fetched latest firmware code, status: {response.status_code}, -  {response.text}')
-    
-            # Save the fetched code to memory
-            self.latest_code = response.text
+            print(f'Fetching latest firmware code, status: {response.status_code}')
+            chunk_size = 512
+            with open('latest_code.py', 'wb') as f:
+                while True:
+                    chunk = response.raw.read(chunk_size)
+                    
+                    if chunk:
+                        f.write(chunk)
+                        sleep(0.5)
+                    else:
+                        break
+            print(f"Download complete")
+            f.close()
+            sleep(5)
             return True
-        
-        elif response.status_code == 404:
-            print('Firmware not found.')
-            return False
+        else:
+            print("Failed to download file")
+            return False            
 
     def update_no_reset(self):
         """ Update the code without resetting the device."""
-
-        # Save the fetched code and update the version file to latest version.
-        with open('latest_code.py', 'w') as f:
-            f.write(self.latest_code)
         
         # update the version in memory
         self.current_version = self.latest_version
@@ -81,12 +76,9 @@ class OTAUpdater:
         # save the current version
         with open('version.json', 'w') as f:
             json.dump({'version': self.current_version}, f)
-        
-        # free up some memory
-        self.latest_code = None
 
         # Overwrite the old code.
-        os.rename('latest_code.py', self.filename)
+        uos.rename('latest_code.py', self.filename)
 
     def update_and_reset(self):
         """ Update the code and reset the device."""
@@ -94,26 +86,54 @@ class OTAUpdater:
         print('Updating device...', end='')
 
         # Overwrite the old code.
-        os.rename('latest_code.py', self.filename)  
+        #uos.rename('latest_code.py', self.filename)  
 
         # Restart the device to run the new code.
         print("Restarting device... (don't worry about an error message after this")
         sleep(0.25)
         machine.reset()  # Reset the device to run the new code.
         
+    def getLatestVersion(self): 
+        url_commit = f"https://api.{self.repo_url}/git/ref/heads/main"
+        headers = {'User-Agent': self.deviceName}
+        response = urequests.get(url_commit,headers=headers)
+            
+        data = json.loads(response.text)
+        
+        commit_sha = data["object"]["sha"]
+        
+        url_tree = f"https://api.{self.repo_url}/git/trees/{commit_sha}"
+        response_tree = urequests.get(url_tree,headers=headers)
+        tree = json.loads(response_tree.text)
+
+        # Find the blob SHA of the file
+        blob_sha = None
+        
+        for item in tree["tree"]:
+            if item["path"] == self.filename:
+                blob_sha = item["sha"]
+                break
+
+        #if blob_sha:
+        #    print(f"The SHA-1 hash of the file is: {blob_sha}")
+        #else:
+        #    print("File not found in the latest commit of the specified branch.")
+        
+        latestVersion = blob_sha
+
+        response = ""
+        data = ""
+        response_tree = ""
+        tree = ""
+        
+        return latestVersion
+    
     def check_for_updates(self):
         """ Check if updates are available."""
         
-        # Connect to Wi-Fi
-        self.connect_wifi()
-
         print('Checking for latest version...')
-        headers = {"accept": "application/json"} 
-        response = urequests.get(self.version_url, headers=headers)
-        
-        data = json.loads(response.text)
        
-        self.latest_version = data['oid']                   # Access directly the id managed by GitHub
+        self.latest_version = self.getLatestVersion()
         print(f'latest version is: {self.latest_version}')
         
         # compare versions
@@ -124,7 +144,9 @@ class OTAUpdater:
     
     def download_and_install_update_if_available(self):
         """ Check for updates, download and install them."""
+        
         if self.check_for_updates():
+            gc.collect()
             if self.fetch_latest_code():
                 self.update_no_reset()
                 self.update_and_reset()
