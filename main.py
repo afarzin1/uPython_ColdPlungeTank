@@ -316,6 +316,12 @@ while True:
     if remoteTerminal == "cmd_update":
         picodebug.logPrint("Remote request for firmare update.")
         ota_updater.download_and_install_update_if_available()
+    if remoteTerminal == "cmd_reset":
+        picodebug.logPrint("Remote request for reset.")
+        machine.reset()
+    if remoteTerminal == "cmd_soft_reset":
+        picodebug.logPrint("Remote request for soft reset.")
+        machine.soft_reset()
     
     CycleLoopCounter +=1
     firstScan = 1
