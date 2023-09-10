@@ -2,7 +2,7 @@ import time, picodebug, mySecrets
 from machine import Pin
 from ota import OTAUpdater
 
-ver="1.00"
+ver="1.01"
 
 print("Initializing...")
 picodebug.logPrint("Initializing")
@@ -121,11 +121,6 @@ lon = mySecrets.lon
 picodebug.logPrint("Initial Wifi call")
 ConnectWifi(1)
 
-#Look for firmware updates
-firmware_url = "https://raw.githubusercontent.com/afarzin1/uPython_ColdPlungeTank/main"
-ota_updater = OTAUpdater(firmware_url, "main.py")
-ota_updater.download_and_install_update_if_available()
-
 picodebug.logPrint("Initial weather check")
 ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
 
@@ -184,6 +179,12 @@ while True:
         #Get new ambient air data from API
         picodebug.logPrint("Get ambient temp")
         ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
+
+        #Look for firmware updates
+        picodebug.logPrint("Checking for firmware updates...")
+        firmware_url = "github.com/repos/afarzin1/uPython_ColdPlungeTank"
+        ota_updater = OTAUpdater("coldPlungeTank",firmware_url, "main.py")
+        ota_updater.download_and_install_update_if_available()
 
         CycleLoopCounter = 0
 

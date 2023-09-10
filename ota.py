@@ -50,19 +50,23 @@ class OTAUpdater:
         if response.status_code == 200:
             print(f'Fetching latest firmware code, status: {response.status_code}')
             chunk_size = 512
-            with open('latest_code.py', 'wb') as f:
-                while True:
-                    chunk = response.raw.read(chunk_size)
-                    
-                    if chunk:
-                        f.write(chunk)
-                        sleep(0.5)
-                    else:
-                        break
-            print(f"Download complete")
-            f.close()
-            sleep(5)
-            return True
+            try:
+                with open('latest_code.py', 'wb') as f:
+                    while True:
+                        chunk = response.raw.read(chunk_size)
+                        
+                        if chunk:
+                            f.write(chunk)
+                            sleep(0.5)
+                        else:
+                            break
+                print(f"Download complete")
+                f.close()
+                sleep(5)
+                return True
+            except OSError as e:
+                print("Connection lost while downloading")
+                return False
         else:
             print("Failed to download file")
             return False            
