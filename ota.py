@@ -47,7 +47,7 @@ class OTAUpdater:
         
     def fetch_latest_code(self)->bool:     
         # Fetch the latest code from the repo.
-        print(self.firmware_url)
+        #print(self.firmware_url)
         response = urequests.get(self.firmware_url, stream=True)
         if response.status_code == 200:
             picodebug.logPrint(f'Fetching latest firmware code, status: {response.status_code}')
@@ -69,7 +69,8 @@ class OTAUpdater:
                 sleep(5)
                 return True
             except OSError as e:
-                print("Connection lost while downloading")
+                picodebug.logPrint("Connection lost while downloading")
+                #print("Connection lost while downloading")
                 return False
         else:
             print("Failed to download file")
@@ -91,7 +92,8 @@ class OTAUpdater:
     def update_and_reset(self):
         """ Update the code and reset the device."""
 
-        print('Updating device...', end='')
+        picodebug.logPrint('Updating device...')
+        #print('Updating device...', end='')
 
         # Overwrite the old code.
         #uos.rename('latest_code.py', self.filename)  

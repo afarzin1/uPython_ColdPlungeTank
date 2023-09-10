@@ -3,7 +3,7 @@ from machine import Pin
 
 time.sleep(1)
 
-ver="1.06"
+ver="1.07"
 devMode = 0
 
 print("Initializing...")
