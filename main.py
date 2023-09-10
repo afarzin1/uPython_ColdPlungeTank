@@ -14,7 +14,7 @@ pin.on()
 time.sleep(5)
 
 picodebug.logPrint("Importing libs")
-import network,time,urequests,json
+import network,time,urequests,json, ntptime
 import math
 import machine
 import blynklib
@@ -68,6 +68,49 @@ def get_uptime_minutes():
 
     return minutes
 
+def is_dst(time_tuple):
+    # DST starts on the second Sunday in March
+    dst_start = time.mktime((time_tuple[0], 3, 8, 2, 0, 0, 0, 0))
+    # DST ends on the first Sunday in November
+    dst_end = time.mktime((time_tuple[0], 11, 1, 2, 0, 0, 0, 0))
+    
+    # Find the actual DST start and end times for the current year
+    while time.localtime(dst_start)[6] != 6:  # Sunday
+        dst_start += 86400  # Add one day
+    while time.localtime(dst_end)[6] != 6:  # Sunday
+        dst_end += 86400  # Add one day
+    
+    current_time_seconds = time.mktime(time_tuple)
+    
+    return current_time_seconds >= dst_start and current_time_seconds < dst_end
+
+def get_worldTime():
+    ntptime.host = 'pool.ntp.org'
+    
+    try:
+        ntptime.settime()
+
+        # Initialize RTC
+        rtc = machine.RTC()
+
+        # Get the updated time
+        current_time = time.localtime()
+
+        # Convert to PST (UTC - 8 hours) or PDT (UTC - 7 hours)
+        offset = -28800  # PST: 8 hours * 60 minutes/hour * 60 seconds/minute
+        if is_dst(current_time):
+            offset += 3600  # Add 1 hour for Daylight Saving Time
+
+        pst_time = time.mktime(current_time) + offset
+        pst_time = time.localtime(pst_time)
+
+        # Set the RTC time
+        rtc.datetime((pst_time[0], pst_time[1], pst_time[2], pst_time[6], pst_time[3], pst_time[4], pst_time[5], 0))
+        time.sleep(1)
+        return 1
+    except:
+        return 0
+
 def get_current_ambient_temperature(api_key, lat, lon):
     url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
     response = urequests.get(url)
@@ -120,6 +163,13 @@ lon = mySecrets.lon
 
 picodebug.logPrint("Initial Wifi call")
 ConnectWifi(1)
+
+picodebug.logPrint("Updating clock")
+try:
+    if get_worldTime():
+        picodebug.logPrint("Clock updated")
+except:
+    picodebug.logPrint("Failed to update clock")
 
 picodebug.logPrint("Initialize Blynk")
 blynk = blynklib.Blynk(BLYNK_AUTH)

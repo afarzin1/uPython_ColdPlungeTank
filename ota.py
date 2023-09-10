@@ -95,7 +95,8 @@ class OTAUpdater:
         # Restart the device to run the new code.
         print("Restarting device... (don't worry about an error message after this")
         sleep(0.25)
-        machine.reset()  # Reset the device to run the new code.
+        #machine.reset()  # Reset the device to run the new code.
+        machine.soft_reset()
         
     def getLatestVersion(self): 
         url_commit = f"https://api.{self.repo_url}/git/ref/heads/main"
