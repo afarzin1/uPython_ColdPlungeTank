@@ -2,7 +2,7 @@ import time, picodebug, mySecrets
 from machine import Pin
 from ota import OTAUpdater
 
-ver="1.04"
+ver="1.05"
 devMode = 0
 
 print("Initializing...")
