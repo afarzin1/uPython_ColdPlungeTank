@@ -3,6 +3,7 @@ from machine import Pin
 from ota import OTAUpdater
 
 ver="1.02"
+devMode = 0
 
 print("Initializing...")
 picodebug.logPrint("Initializing")
@@ -20,7 +21,6 @@ import blynklib
 import gc
 
 #First scan initialization
-devMode = 1
 firstScan = 0
 CycleLoopCounter = 0
 BLYNK_AUTH = mySecrets.blynkauth
