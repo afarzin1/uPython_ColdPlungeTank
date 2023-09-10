@@ -2,7 +2,7 @@ import time, picodebug, mySecrets
 from machine import Pin
 from ota import OTAUpdater
 
-ver="1.03"
+ver="1.04"
 devMode = 0
 
 print("Initializing...")
@@ -11,7 +11,7 @@ picodebug.logPrint("Initializing")
 #turn on LED for first-scan
 pin = Pin("LED", Pin.OUT)
 pin.on()
-time.sleep(5)
+time.sleep(2)
 
 picodebug.logPrint("Importing libs")
 import network,time,urequests,json, ntptime
@@ -32,13 +32,19 @@ ssid = mySecrets.mySSID
 password = mySecrets.myWifiPassword
 
 def ConnectWifi(printIP):
+
+    attemptCounter = 0
     
     if not wlan.isconnected():
         while not wlan.isconnected():
+            if attemptCounter == 5:
+                picodebug.logPrint("Wifi not connecting, rebooting...")
+                machine.reset()
             print("Trying to connect...")
             wlan.connect(ssid, password)
             pin.toggle()
-            time.sleep(5)
+            attemptCounter += 1
+            time.sleep(3)
     if wlan.isconnected():
             
         status = wlan.ifconfig()

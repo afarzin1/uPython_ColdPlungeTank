@@ -1,4 +1,4 @@
-import network,time,urequests,json
+import network,time,urequests,json,machine
 
 ssid = "MyNet1-guest"
 password = "farzinguest"
@@ -6,10 +6,19 @@ password = "farzinguest"
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 
+attemptCounter = 0
+
 if not wlan.isconnected():
     while not wlan.isconnected():
+        if attemptCounter == 5:
+            print("Rebooting...")
+            machine.reset()
+        
         print("Trying to connect...")
         wlan.connect(ssid, password)
+        attemptCounter += 1
+
+        
         time.sleep(3)
 if wlan.isconnected():
     print("Connected to Wifi")
@@ -29,5 +38,9 @@ weather_api_key = '8d39bb994768bab0ecc03fe6a16c453a'
 lat = 39.444151 
 lon = -119.735969
 
-ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
-print(ambient_temperature)
+#ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
+#print(ambient_temperature)
+
+while True:
+    print("Working")
+    time.sleep(1)
