@@ -161,9 +161,9 @@ class OTAUpdater:
         """ Check for updates, download and install them."""
         
         if self.check_for_updates():
-            gc.collect()
             if self.fetch_latest_code():
                 self.update_no_reset()
+                gc.collect()
                 self.update_and_reset()
         else:
             picodebug.logPrint("No new updates available")

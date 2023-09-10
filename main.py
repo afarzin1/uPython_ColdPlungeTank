@@ -1,9 +1,9 @@
 import time, picodebug, mySecrets
 from machine import Pin
 
-time.sleep(1)
+time.sleep(3)
 
-ver="1.07"
+ver="1.08"
 devMode = 0
 
 print("Initializing...")
@@ -12,7 +12,6 @@ picodebug.logPrint("Initializing")
 #turn on LED for first-scan
 pin = Pin("LED", Pin.OUT)
 pin.on()
-
 
 picodebug.logPrint("Importing libs")
 import network,time,urequests,json, ntptime
@@ -246,20 +245,15 @@ while True:
         try:
             ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
         except:
-            picodebug.logPrint("Get temp failed")         
-
-    #100s Loop
-    if CycleLoopCounter == 100:
-        picodebug.logPrint("Rotating logs")
-        picodebug.logRotate()
+            picodebug.logPrint("Get temp failed")              
     
     #900s Loop
     if CycleLoopCounter == 900:
         #Look for firmware updates
-        picodebug.logPrint("Entering 300s Loop")
+        picodebug.logPrint("Entering 900s Loop")
         
-        picodebug.logPrint("Cleaning logs")
-        picodebug.logClean()      
+        picodebug.logPrint("Rotating logs")
+        picodebug.logRotate()   
         
         picodebug.logPrint("Checking for firmware updates...")
         picodebug.logPrint("Current version: " + ver)
