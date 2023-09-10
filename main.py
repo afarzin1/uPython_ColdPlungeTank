@@ -2,7 +2,7 @@ import time, picodebug, mySecrets
 from machine import Pin
 from ota import OTAUpdater
 
-ver="1.02"
+ver="1.03"
 devMode = 0
 
 print("Initializing...")
@@ -184,6 +184,8 @@ while True:
         #Look for firmware updates
         picodebug.logPrint("Entering Slow Loop")
         picodebug.logPrint("Checking for firmware updates...")
+        picodebug.logPrint("Current version: " + ver)
+        ErroLog = "Current version: " + ver
         firmware_url = "github.com/repos/afarzin1/uPython_ColdPlungeTank"
         ota_updater = OTAUpdater("coldPlungeTank",firmware_url, "main.py")
         ota_updater.download_and_install_update_if_available()
@@ -226,7 +228,6 @@ while True:
         blynk.virtual_write(1, water_temperature)
     blynk.virtual_write(3, number_of_ice_packs)
     blynk.virtual_write(5, ErroLog)
-    ErroLog = ""
     #blynk.log_event("cooling_started")
     
     picodebug.logPrint("Run Blynk")
