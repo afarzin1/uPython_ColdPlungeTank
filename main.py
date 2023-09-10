@@ -241,7 +241,7 @@ while True:
         picodebug.logPrint("Entering Slow Loop")
         picodebug.logPrint("Checking for firmware updates...")
         picodebug.logPrint("Current version: " + ver)
-        ErroLog = "Current version: " + ver
+        ErroLog = str(timestamp) + "Current version: " + ver
         firmware_url = "github.com/repos/afarzin1/uPython_ColdPlungeTank"
         ota_updater = OTAUpdater("coldPlungeTank",firmware_url, "main.py")
         ota_updater.download_and_install_update_if_available()
