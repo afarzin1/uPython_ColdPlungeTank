@@ -232,9 +232,9 @@ while True:
     WaterTempSamples.append(temp_calibrated)
     #print(temp_calibrated)
 
-    #Medium loop - Do these actions at a reduced rate compared main loop
+    #10s Loop
     if (CycleLoopCounter % 10) == 0:
-        picodebug.logPrint("Entering Medium Loop")
+        picodebug.logPrint("Entering 10s Loop")
         #Average out 10, 1s samples of water and post that to blynk
         WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
         water_temperature = WaterTempAverage
@@ -246,13 +246,21 @@ while True:
         except:
             picodebug.logPrint("Get temp failed")         
 
-    #Slow loop
-    if CycleLoopCounter == 300:
+    #100s Loop
+    if CycleLoopCounter == 100:
+        picodebug.logPrint("Rotating logs")
+        picodebug.logRotate()
+    
+    #900s Loop
+    if CycleLoopCounter == 900:
         #Look for firmware updates
-        picodebug.logPrint("Entering Slow Loop")
+        picodebug.logPrint("Entering 300s Loop")
+        
+        picodebug.logPrint("Cleaning logs")
+        picodebug.logClean()      
+        
         picodebug.logPrint("Checking for firmware updates...")
         picodebug.logPrint("Current version: " + ver)
-        
         ota_updater.download_and_install_update_if_available()
         
         CycleLoopCounter = 0
