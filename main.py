@@ -259,10 +259,10 @@ while True:
         
         picodebug.logPrint("Checking for firmware updates...")
         picodebug.logPrint("Current version: " + ver)
-        ota_updater.download_and_install_update_if_available()  
+        #ota_updater.download_and_install_update_if_available()  
     
     #Reset every 1h due to mystery memory leak
-    if CycleLoopCounter == 3600:
+    if CycleLoopCounter == 1800:
         machine.soft_reset()
     
     #Calcualte number of ice packs needed
