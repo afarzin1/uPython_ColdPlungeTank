@@ -299,6 +299,10 @@ while True:
         EventSent_CoolingActive_Off = 1
         
     #Write Values-------------------------------------------------
+    if cmdPing:
+        remoteTerminal = "\n" + str(CycleLoopCounter)
+        cmdPing = False
+    
     picodebug.logPrint("Write Blynk outputs")
     blynk.virtual_write(0, ambient_temperature)
     if not devMode:
@@ -306,11 +310,7 @@ while True:
     blynk.virtual_write(3, number_of_ice_packs)
     blynk.virtual_write(5, remoteTerminal)
     #blynk.log_event("cooling_started")
-
-    if cmdPing:
-        remoteTerminal = "\n" + str(CycleLoopCounter)
-        cmdPing = False
-    
+  
     picodebug.logPrint("Run Blynk")
     try:
         blynk.run()
