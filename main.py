@@ -3,7 +3,7 @@ from machine import Pin
 
 time.sleep(3)
 
-ver="1.08"
+ver="1.09"
 devMode = 0
 
 print("Initializing...")
@@ -259,9 +259,11 @@ while True:
         
         picodebug.logPrint("Checking for firmware updates...")
         picodebug.logPrint("Current version: " + ver)
-        ota_updater.download_and_install_update_if_available()
-        
-        CycleLoopCounter = 0
+        ota_updater.download_and_install_update_if_available()  
+    
+    #Reset every 1h due to mystery memory leak
+    if CycleLoopCounter == 3600:
+        machine.soft_reset()
     
     #Calcualte number of ice packs needed
     if waterSetpoint != '':
