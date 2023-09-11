@@ -1,2 +1,2 @@
-import micropython
-print("Stack usage:", micropython.stack_use())
+import micropython, gc
+print(gc.mem_free())

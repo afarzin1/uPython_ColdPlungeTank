@@ -258,13 +258,13 @@ while True:
         picodebug.logPrint("Rotating logs")
         picodebug.logRotate()   
         
-        picodebug.logPrint("Checking for firmware updates...")
-        picodebug.logPrint("Current version: " + ver)
+        #picodebug.logPrint("Checking for firmware updates...")
+        #picodebug.logPrint("Current version: " + ver)
         #ota_updater.download_and_install_update_if_available()  
     
     #Reset due to mystery memory leak
     if CycleLoopCounter == 1800:
-        machine.soft_reset()
+        machine.reset()
     
     #Calcualte number of ice packs needed
     if waterSetpoint != '':
@@ -334,5 +334,7 @@ while True:
     CycleLoopCounter +=1
     firstScan = 1
     pin.off()
-    time.sleep(1)
     remoteTerminal = ""
+    picodebug.logPrint("Free memory:" + str(gc.mem_free()))
+    time.sleep(1)
+    
