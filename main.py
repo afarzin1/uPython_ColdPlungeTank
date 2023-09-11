@@ -1,12 +1,9 @@
 import time, picodebug, mySecrets
 from machine import Pin
-from machine import WDT
 
 time.sleep(3)
 
-wdt = WDT(timeout=15000)
-
-ver="1.10"
+ver="1.11"
 devMode = 0
 
 print("Initializing...")
@@ -322,6 +319,7 @@ while True:
 
     #Remote requests
     if remoteTerminal == "cmd_update":
+        
         picodebug.logPrint("Remote request for firmare update.")
         ota_updater.download_and_install_update_if_available()
     if remoteTerminal == "cmd_reset":
@@ -338,5 +336,3 @@ while True:
     pin.off()
     time.sleep(1)
     remoteTerminal = ""
-    wdt.feed()
-    #picodebug.logPrint("Free memory:" + str(gc.mem_free()))
