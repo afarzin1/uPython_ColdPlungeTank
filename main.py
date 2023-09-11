@@ -16,7 +16,7 @@ pin = Pin("LED", Pin.OUT)
 pin.on()
 
 picodebug.logPrint("Importing libs",OutputToConsole)
-import network,time,urequests,json, ntptime
+import network,time,urequests,json, ntptime, os
 from ota import OTAUpdater
 import math
 import machine
@@ -152,6 +152,21 @@ def get_worldTime():
         return 1
     except:
         return 0
+
+def GetFreeSpace():
+    # Get the status of the file system
+    stat = os.statvfs('/')
+
+    # Calculate the available space
+    block_size = stat[0]  # Size of a block
+    total_blocks = stat[2]  # Total data blocks in the file system
+    free_blocks = stat[3]  # Free blocks in the file system
+
+    # Calculate total and free space in bytes
+    total_space = block_size * total_blocks
+    free_space = block_size * free_blocks
+
+    return free_space
 
 def get_current_ambient_temperature(api_key, lat, lon):
     url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
@@ -338,6 +353,6 @@ while True:
     remoteTerminal = ""
     WaterTempSamples.clear()
     picodebug.logPrint("Free memory:" + str(gc.mem_free()),OutputToConsole)
-    
+    picodebug.logPrint("Free space:" + str(GetFreeSpace()),OutputToConsole)
     time.sleep(1)
     
