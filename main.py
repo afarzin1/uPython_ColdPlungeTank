@@ -157,6 +157,8 @@ def get_current_ambient_temperature(api_key, lat, lon):
     if response.status_code == 200:
         data = json.loads(response.text)
         current_temperature = data['main']['feels_like']
+        data = ""
+        response = ""
         return current_temperature
     else:
         return f"Error: {response.status_code}"
@@ -324,3 +326,4 @@ while True:
     pin.off()
     time.sleep(1)
     remoteTerminal = ""
+    picodebug.logPrint("Free memory:" + str(gc.mem_free()))
