@@ -1,9 +1,12 @@
 import time, picodebug, mySecrets
 from machine import Pin
+from machine import WDT
 
 time.sleep(3)
 
-ver="1.09"
+wdt = WDT(timeout=15000)
+
+ver="1.10"
 devMode = 0
 
 print("Initializing...")
@@ -44,6 +47,7 @@ coolingEnd_waterTemp = 0.0
 coolDownDegs = 0.0
 coolStartMin = 0
 coolEndMin = 0
+cmdPing = False
 
 state = 'idle'
 remoteTerminal = "\nBooting up v" + ver + "\n"
@@ -261,7 +265,7 @@ while True:
         picodebug.logPrint("Current version: " + ver)
         #ota_updater.download_and_install_update_if_available()  
     
-    #Reset every 1h due to mystery memory leak
+    #Reset due to mystery memory leak
     if CycleLoopCounter == 1800:
         machine.soft_reset()
     
@@ -305,6 +309,10 @@ while True:
     blynk.virtual_write(3, number_of_ice_packs)
     blynk.virtual_write(5, remoteTerminal)
     #blynk.log_event("cooling_started")
+
+    if cmdPing:
+        remoteTerminal = "\n" + str(CycleLoopCounter)
+        cmdPing = False
     
     picodebug.logPrint("Run Blynk")
     try:
@@ -322,10 +330,13 @@ while True:
     if remoteTerminal == "cmd_soft_reset":
         picodebug.logPrint("Remote request for soft reset.")
         machine.soft_reset()
+    if remoteTerminal == "cmd_ping":
+        cmdPing = True
     
     CycleLoopCounter +=1
     firstScan = 1
     pin.off()
     time.sleep(1)
     remoteTerminal = ""
-    picodebug.logPrint("Free memory:" + str(gc.mem_free()))
+    wdt.feed()
+    #picodebug.logPrint("Free memory:" + str(gc.mem_free()))
