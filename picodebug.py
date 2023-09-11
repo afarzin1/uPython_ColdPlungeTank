@@ -24,7 +24,7 @@ def logPrint(myParam, outputToConsole = True, outputToFile = True, makeTimeStamp
 
 def logClean():
     import os
-    maxFiles = 8
+    maxFiles = 3
    
     for i in range(maxFiles): 
         try:
@@ -36,8 +36,8 @@ def logRotate():
     import os
 
     fileSize = 0
-    maxSize = 100000
-    maxFiles = 8
+    maxSize = 50000
+    maxFiles = 3
 
     try:
         fileSize = os.stat('log1.txt')[6]
