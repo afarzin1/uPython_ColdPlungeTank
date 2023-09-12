@@ -3,7 +3,7 @@ from machine import Pin
 
 time.sleep(5)
 
-ver="1.12"
+ver="1.13"
 devMode = False
 OutputToConsole = 1
 
