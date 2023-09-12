@@ -24,12 +24,21 @@ def logPrint(myParam, outputToConsole = True, outputToFile = True, makeTimeStamp
 
 def logClean():
     import os
-    maxFiles = 3
-   
-    for i in range(maxFiles): 
+
+    # List all files in the current directory
+    all_files = os.listdir()
+
+    # Filter files that start with 'log' and end with '.txt'
+    log_files = [f for f in all_files if f.startswith('log') and f.endswith('.txt')]
+
+    for filename in log_files:
         try:
-            os.remove(f"log{i+1}.txt")
-        except:
+            # Check if the file exists
+            os.stat(filename)
+            # If the above line doesn't raise an exception, the file exists and can be removed
+            os.remove(filename)
+        except OSError:
+            # File doesn't exist or couldn't be removed
             pass
 
 def logRotate():

@@ -4,8 +4,8 @@ from machine import Pin
 time.sleep(5)
 
 ver="1.12"
-devMode = True
-OutputToConsole = False
+devMode = False
+OutputToConsole = 1
 
 picodebug.logClean()
 
@@ -207,6 +207,9 @@ except:
     picodebug.logPrint("Failed to update clock",OutputToConsole)
 
 
+FreeMem = gc.mem_free() / 1000
+FreeSpace = GetFreeSpace() / 1000
+
 #Initialize Blynk
 picodebug.logPrint("Initialize Blynk",OutputToConsole)
 blynk = blynklib.Blynk(BLYNK_AUTH)
@@ -214,7 +217,7 @@ blynk = blynklib.Blynk(BLYNK_AUTH)
 @blynk.on("V*")
 def read_handler(pin, value):
     picodebug.logPrint("Blynk read handler called",OutputToConsole)
-    global icepacks_added, coolingActive, waterSetpoint, remoteTerminal
+    global icepacks_added, coolingActive, waterSetpoint, remoteTerminal, FreeMem, FreeSpace
 
     if pin == '2':
         icepacks_added = value[0]
@@ -311,19 +314,24 @@ while True:
 
         EventSent_CoolingActive = 0
         EventSent_CoolingActive_Off = 1
-        
+           
     #Write Values-------------------------------------------------
     if cmdPing:
         remoteTerminal = "\n" + str(CycleLoopCounter)
         cmdPing = False
     
     picodebug.logPrint("Write Blynk outputs",OutputToConsole)
-    blynk.virtual_write(0, ambient_temperature)
-    if not devMode:
-        blynk.virtual_write(1, water_temperature)
-    blynk.virtual_write(3, number_of_ice_packs)
-    blynk.virtual_write(5, remoteTerminal)
-    #blynk.log_event("cooling_started")
+    try:
+        blynk.virtual_write(0, ambient_temperature)
+        if not devMode:
+            blynk.virtual_write(1, water_temperature)
+        blynk.virtual_write(3, number_of_ice_packs)
+        blynk.virtual_write(5, remoteTerminal)
+        blynk.virtual_write(7, FreeMem)
+        blynk.virtual_write(8, FreeSpace)
+        #blynk.log_event("cooling_started")
+    except:
+        picodebug.logPrint("Write to Blynk failed",OutputToConsole)
   
     picodebug.logPrint("Run Blynk",OutputToConsole)
     try:
@@ -332,17 +340,17 @@ while True:
         picodebug.logPrint("Run Blynk failed",OutputToConsole)
 
     #Remote requests
-    if remoteTerminal == "cmd_update":
+    if remoteTerminal == "update":
         
         picodebug.logPrint("Remote request for firmare update",OutputToConsole)
         ota_updater.download_and_install_update_if_available()
-    if remoteTerminal == "cmd_reset":
+    if remoteTerminal == "reset":
         picodebug.logPrint("Remote request for reset",OutputToConsole)
         machine.reset()
-    if remoteTerminal == "cmd_soft_reset":
+    if remoteTerminal == "soft_reset":
         picodebug.logPrint("Remote request for soft reset",OutputToConsole)
         machine.soft_reset()
-    if remoteTerminal == "cmd_ping":
+    if remoteTerminal == "ping":
         cmdPing = True
     
     CycleLoopCounter +=1
@@ -352,7 +360,7 @@ while True:
     #Cleanup loop memory
     remoteTerminal = ""
     WaterTempSamples.clear()
-    picodebug.logPrint("Free memory:" + str(gc.mem_free()),OutputToConsole)
-    picodebug.logPrint("Free space:" + str(GetFreeSpace()),OutputToConsole)
+    picodebug.logPrint("Free memory: {}".format(FreeMem),OutputToConsole) 
+    picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole)
     time.sleep(1)
     
