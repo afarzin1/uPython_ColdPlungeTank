@@ -5,17 +5,18 @@ time.sleep(5)
 
 ver="1.13"
 devMode = False
-OutputToConsole = 1
+OutputToConsole = False
+OutputToFile = False
 
-picodebug.logClean()
+#picodebug.logClean()
 
-picodebug.logPrint("Initializing",OutputToConsole)
+picodebug.logPrint("Initializing",OutputToConsole,OutputToFile)
 
 #turn on LED for first-scan
 pin = Pin("LED", Pin.OUT)
 pin.on()
 
-picodebug.logPrint("Importing libs",OutputToConsole)
+picodebug.logPrint("Importing libs",OutputToConsole,OutputToFile)
 import network,time,urequests,json, ntptime, os
 from ota import OTAUpdater
 import math
@@ -61,7 +62,7 @@ firmware_url = "github.com/repos/afarzin1/uPython_ColdPlungeTank"
 ota_updater = OTAUpdater("coldPlungeTank",firmware_url, "main.py")
 
 #Init WIFI
-picodebug.logPrint("Initializing WIFI",OutputToConsole)
+picodebug.logPrint("Initializing WIFI",OutputToConsole,OutputToFile)
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 ssid = mySecrets.mySSID
@@ -74,7 +75,7 @@ def ConnectWifi(printIP):
     if not wlan.isconnected():
         while not wlan.isconnected():
             if attemptCounter == 5:
-                picodebug.logPrint("Wifi not connecting, rebooting...",OutputToConsole)
+                picodebug.logPrint("Wifi not connecting, rebooting...",OutputToConsole,OutputToFile)
                 machine.reset()
             print("Trying to connect...")
             wlan.connect(ssid, password)
@@ -195,28 +196,28 @@ def calculate_ice_packs(T_initial, T_final):
     return N
 
 #Connect to Wifi
-picodebug.logPrint("Initial Wifi call",OutputToConsole)
+picodebug.logPrint("Initial Wifi call",OutputToConsole,OutputToFile)
 ConnectWifi(1)
 
 #Update RTC to actual time
-picodebug.logPrint("Updating clock",OutputToConsole)
+picodebug.logPrint("Updating clock",OutputToConsole,OutputToFile)
 try:
     if get_worldTime():
-        picodebug.logPrint("Clock updated",OutputToConsole)
+        picodebug.logPrint("Clock updated",OutputToConsole,OutputToFile)
 except:
-    picodebug.logPrint("Failed to update clock",OutputToConsole)
+    picodebug.logPrint("Failed to update clock",OutputToConsole,OutputToFile)
 
 
 FreeMem = gc.mem_free() / 1000
 FreeSpace = GetFreeSpace() / 1000
 
 #Initialize Blynk
-picodebug.logPrint("Initialize Blynk",OutputToConsole)
+picodebug.logPrint("Initialize Blynk",OutputToConsole,OutputToFile)
 blynk = blynklib.Blynk(BLYNK_AUTH)
 
 @blynk.on("V*")
 def read_handler(pin, value):
-    picodebug.logPrint("Blynk read handler called",OutputToConsole)
+    picodebug.logPrint("Blynk read handler called",OutputToConsole,OutputToFile)
     global icepacks_added, coolingActive, waterSetpoint, remoteTerminal, FreeMem, FreeSpace
 
     if pin == '2':
@@ -234,94 +235,95 @@ def read_handler(pin, value):
 
 
 #Main loop ------------------------------------------------
-picodebug.logPrint("Entering loop",OutputToConsole)
+picodebug.logPrint("Entering loop",OutputToConsole,OutputToFile)
 while True:
-    gc.collect()
-    picodebug.logPrint("Get timestamp",OutputToConsole)
-    timestamp = get_uptime()
-    
-    #Main process ----------------------------------------------
-    picodebug.logPrint("Check wifi",OutputToConsole)
-    ConnectWifi(0)
-    
-    #Read Pi W temp sensor value
-    picodebug.logPrint("Get temps",OutputToConsole)
-    sensor_temp = machine.ADC(4)
-    conversion_factor = 3.3 / (65535)
-    reading = sensor_temp.read_u16() * conversion_factor 
-    temperature = 27 - (reading - 0.706)/0.001721
-    temp_calibrated = temperature - 9.0
-    WaterTempSamples.append(temp_calibrated)
-    #print(temp_calibrated)
-
-    #10s Loop
-    if (CycleLoopCounter % 10) == 0:
-        picodebug.logPrint("Entering 10s Loop",OutputToConsole)
-        #Average out 10, 1s samples of water and post that to blynk
-        if len(WaterTempSamples) > 0:
-            WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
-            water_temperature = WaterTempAverage
-        
-        #Get new ambient air data from API
-        picodebug.logPrint("Get ambient temp",OutputToConsole)
-        try:
-            ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
-        except:
-            picodebug.logPrint("Get temp failed")              
-    
-    #900s Loop
-    if CycleLoopCounter == 900:
-        #Look for firmware updates
-        picodebug.logPrint("Entering 900s Loop",OutputToConsole)
-        
-        picodebug.logPrint("Rotating logs",OutputToConsole)
-        picodebug.logRotate()   
-        
-        CycleLoopCounter = 0  
-    
-    #Reset due to mystery memory leak
-    #if CycleLoopCounter == 1800:
-        #machine.reset()
-    
-    #Calcualte number of ice packs needed
-    if waterSetpoint != '':
-        picodebug.logPrint("Calculate ice packs",OutputToConsole)
-        number_of_ice_packs = calculate_ice_packs(water_temperature, int(waterSetpoint))
-    else:
-        number_of_ice_packs = 0
-
-    #Cooling On State
-    if (coolingActive == '1') and (EventSent_CoolingActive == 0):
-        state = 'cooling_started'
-        blynk.log_event("cooling_started")
-        coolingStart_waterTemp = water_temperature
-        coolStartMin = get_uptime_minutes()
-        remoteTerminal = str(timestamp) + " Cooling started at " + str(round(coolingStart_waterTemp,2)) + "deg \n"
-
-        EventSent_CoolingActive = 1
-        EventSent_CoolingActive_Off = 0
-    
-    #Cooling OFf State
-    if state == 'cooling_started' and coolingActive == '0':
-        state = 'idle'
-        blynk.log_event("cooling_stopped")
-        coolingEnd_waterTemp = water_temperature
-        coolEndMin = get_uptime_minutes()
-        coolTimeMin = coolEndMin - coolStartMin
-        #remoteTerminal = str(timestamp) + " Cooling ended at " + str(round(coolingEnd_waterTemp,2)) + "deg \n"
-        coolDownDegs = round(coolingEnd_waterTemp - coolingStart_waterTemp,2)
-        remoteTerminal = str(timestamp) + " Cooled down water by " + str(coolDownDegs) + "deg in " + str(coolTimeMin) + " minutes with " + str(icepacks_added) + " ice packs \n"
-
-        EventSent_CoolingActive = 0
-        EventSent_CoolingActive_Off = 1
-           
-    #Write Values-------------------------------------------------
-    if cmdPing:
-        remoteTerminal = "\n" + str(CycleLoopCounter)
-        cmdPing = False
-    
-    picodebug.logPrint("Write Blynk outputs",OutputToConsole)
     try:
+        gc.collect()
+        picodebug.logPrint("Get timestamp",OutputToConsole,OutputToFile)
+        timestamp = get_uptime()
+        
+        #Main process ----------------------------------------------
+        picodebug.logPrint("Check wifi",OutputToConsole,OutputToFile)
+        ConnectWifi(0)
+        
+        #Read Pi W temp sensor value
+        picodebug.logPrint("Get temps",OutputToConsole,OutputToFile)
+        sensor_temp = machine.ADC(4)
+        conversion_factor = 3.3 / (65535)
+        reading = sensor_temp.read_u16() * conversion_factor 
+        temperature = 27 - (reading - 0.706)/0.001721
+        temp_calibrated = temperature - 9.0
+        WaterTempSamples.append(temp_calibrated)
+        #print(temp_calibrated)
+
+        #10s Loop
+        if (CycleLoopCounter % 10) == 0:
+            picodebug.logPrint("Entering 10s Loop",OutputToConsole,OutputToFile)
+            #Average out 10, 1s samples of water and post that to blynk
+            if len(WaterTempSamples) > 0:
+                WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
+                water_temperature = WaterTempAverage
+            
+            #Get new ambient air data from API
+            picodebug.logPrint("Get ambient temp",OutputToConsole,OutputToFile)
+            try:
+                ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
+            except:
+                picodebug.logPrint("Get temp failed")              
+        
+        #900s Loop
+        if CycleLoopCounter == 900:
+            #Look for firmware updates
+            if OutputToFile:
+                picodebug.logPrint("Entering 900s Loop",OutputToConsole,OutputToFile)
+                picodebug.logPrint("Rotating logs",OutputToConsole,OutputToFile)
+                picodebug.logRotate()   
+            
+            CycleLoopCounter = 0  
+        
+        #Reset due to mystery memory leak
+        if CycleLoopCounter == 1800:
+            machine.reset()
+        
+        #Calcualte number of ice packs needed
+        if waterSetpoint != '':
+            picodebug.logPrint("Calculate ice packs",OutputToConsole,OutputToFile)
+            number_of_ice_packs = calculate_ice_packs(water_temperature, int(waterSetpoint))
+        else:
+            number_of_ice_packs = 0
+
+        #Cooling On State
+        if (coolingActive == '1') and (EventSent_CoolingActive == 0):
+            state = 'cooling_started'
+            blynk.log_event("cooling_started")
+            coolingStart_waterTemp = water_temperature
+            coolStartMin = get_uptime_minutes()
+            remoteTerminal = str(timestamp) + " Cooling started at " + str(round(coolingStart_waterTemp,2)) + "deg \n"
+
+            EventSent_CoolingActive = 1
+            EventSent_CoolingActive_Off = 0
+        
+        #Cooling OFf State
+        if state == 'cooling_started' and coolingActive == '0':
+            state = 'idle'
+            blynk.log_event("cooling_stopped")
+            coolingEnd_waterTemp = water_temperature
+            coolEndMin = get_uptime_minutes()
+            coolTimeMin = coolEndMin - coolStartMin
+            #remoteTerminal = str(timestamp) + " Cooling ended at " + str(round(coolingEnd_waterTemp,2)) + "deg \n"
+            coolDownDegs = round(coolingEnd_waterTemp - coolingStart_waterTemp,2)
+            remoteTerminal = str(timestamp) + " Cooled down water by " + str(coolDownDegs) + "deg in " + str(coolTimeMin) + " minutes with " + str(icepacks_added) + " ice packs \n"
+
+            EventSent_CoolingActive = 0
+            EventSent_CoolingActive_Off = 1
+            
+        #Write Values-------------------------------------------------
+        if cmdPing:
+            remoteTerminal = "\n" + str(CycleLoopCounter)
+            cmdPing = False
+        
+        picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
+    
         blynk.virtual_write(0, ambient_temperature)
         if not devMode:
             blynk.virtual_write(1, water_temperature)
@@ -330,37 +332,36 @@ while True:
         blynk.virtual_write(7, FreeMem)
         blynk.virtual_write(8, FreeSpace)
         #blynk.log_event("cooling_started")
-    except:
-        picodebug.logPrint("Write to Blynk failed",OutputToConsole)
-  
-    picodebug.logPrint("Run Blynk",OutputToConsole)
-    try:
-        blynk.run()
-    except:
-        picodebug.logPrint("Run Blynk failed",OutputToConsole)
-
-    #Remote requests
-    if remoteTerminal == "update":
         
-        picodebug.logPrint("Remote request for firmare update",OutputToConsole)
-        ota_updater.download_and_install_update_if_available()
-    if remoteTerminal == "reset":
-        picodebug.logPrint("Remote request for reset",OutputToConsole)
-        machine.reset()
-    if remoteTerminal == "soft_reset":
-        picodebug.logPrint("Remote request for soft reset",OutputToConsole)
-        machine.soft_reset()
-    if remoteTerminal == "ping":
-        cmdPing = True
     
-    CycleLoopCounter +=1
-    firstScan = 1
-    pin.off()
-    
-    #Cleanup loop memory
-    remoteTerminal = ""
-    WaterTempSamples.clear()
-    picodebug.logPrint("Free memory: {}".format(FreeMem),OutputToConsole) 
-    picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole)
-    time.sleep(1)
-    
+        picodebug.logPrint("Run Blynk",OutputToConsole,OutputToFile)
+        
+        blynk.run()
+        
+
+        #Remote requests
+        if remoteTerminal == "update":
+            
+            picodebug.logPrint("Remote request for firmare update",OutputToConsole,OutputToFile)
+            ota_updater.download_and_install_update_if_available()
+        if remoteTerminal == "reset":
+            picodebug.logPrint("Remote request for reset",OutputToConsole,OutputToFile)
+            machine.reset()
+        if remoteTerminal == "soft_reset":
+            picodebug.logPrint("Remote request for soft reset",OutputToConsole,OutputToFile)
+            machine.soft_reset()
+        if remoteTerminal == "ping":
+            cmdPing = True
+        
+        CycleLoopCounter +=1
+        firstScan = 1
+        pin.off()
+        
+        #Cleanup loop memory
+        remoteTerminal = ""
+        WaterTempSamples.clear()
+        picodebug.logPrint("Free memory: {}".format(FreeMem),OutputToConsole,OutputToFile) 
+        picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole,OutputToFile)
+        time.sleep(1)
+    except:
+        pass
