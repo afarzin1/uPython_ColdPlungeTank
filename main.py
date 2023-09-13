@@ -279,11 +279,12 @@ while True:
                 picodebug.logPrint("Rotating logs",OutputToConsole,OutputToFile)
                 picodebug.logRotate()   
             
-            CycleLoopCounter = 0  
+             
         
         #Reset due to mystery memory leak
         if CycleLoopCounter == 1800:
             machine.reset()
+            CycleLoopCounter = 0
         
         #Calcualte number of ice packs needed
         if waterSetpoint != '':
