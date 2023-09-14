@@ -1,11 +1,11 @@
 import time, picodebug, mySecrets
-from machine import Pin
+import machine
 
 time.sleep(5)
 
 ver="1.15"
-devMode = False
-OutputToConsole = False
+devMode = True
+OutputToConsole = True
 OutputToFile = False
 
 #picodebug.logClean()
@@ -13,7 +13,7 @@ OutputToFile = False
 picodebug.logPrint("Initializing",OutputToConsole,OutputToFile)
 
 #turn on LED for first-scan
-pin = Pin("LED", Pin.OUT)
+pin = machine.Pin("LED", machine.Pin.OUT)
 pin.on()
 
 picodebug.logPrint("Importing libs",OutputToConsole,OutputToFile)
@@ -48,7 +48,7 @@ coolDownDegs = 0.0
 coolStartMin = 0
 coolEndMin = 0
 cmdPing = False
-peakHours = False
+peakHours = True
 
 state = 'idle'
 remoteTerminal = "\nBooting up v" + ver + "\n"
@@ -324,10 +324,10 @@ while True:
         
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
     
-        blynk.virtual_write(0, ambient_temperature)
         if not devMode:
+            blynk.virtual_write(0, ambient_temperature)
             blynk.virtual_write(1, water_temperature)
-        blynk.virtual_write(3, number_of_ice_packs)
+            blynk.virtual_write(3, number_of_ice_packs)
         blynk.virtual_write(5, remoteTerminal)
         blynk.virtual_write(7, FreeMem)
         blynk.virtual_write(8, FreeSpace)
@@ -361,9 +361,11 @@ while True:
         picodebug.logPrint("Free memory: {}".format(FreeMem),OutputToConsole,OutputToFile) 
         picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole,OutputToFile)
         
+        gc.collect()
+        
         if peakHours:
             time.sleep(1)
         else:
-            machine.lightsleep(10000)
+            time.sleep(10)
     except:
         pass
