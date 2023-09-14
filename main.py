@@ -3,7 +3,7 @@ from machine import Pin
 
 time.sleep(5)
 
-ver="1.14"
+ver="1.15"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -48,6 +48,7 @@ coolDownDegs = 0.0
 coolStartMin = 0
 coolEndMin = 0
 cmdPing = False
+peakHours = False
 
 state = 'idle'
 remoteTerminal = "\nBooting up v" + ver + "\n"
@@ -285,11 +286,12 @@ while True:
             CycleLoopCounter = 0
         
         #Calcualte number of ice packs needed
-        if waterSetpoint != '':
-            picodebug.logPrint("Calculate ice packs",OutputToConsole,OutputToFile)
-            number_of_ice_packs = calculate_ice_packs(water_temperature, int(waterSetpoint))
-        else:
-            number_of_ice_packs = 0
+        if firstScan:
+            if waterSetpoint != '':
+                picodebug.logPrint("Calculate ice packs",OutputToConsole,OutputToFile)
+                number_of_ice_packs = calculate_ice_packs(water_temperature, int(waterSetpoint))
+            else:
+                number_of_ice_packs = 0
 
         #Cooling On State
         if (coolingActive == '1') and (EventSent_CoolingActive == 0):
@@ -358,6 +360,10 @@ while True:
         WaterTempSamples.clear()
         picodebug.logPrint("Free memory: {}".format(FreeMem),OutputToConsole,OutputToFile) 
         picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole,OutputToFile)
-        time.sleep(1)
+        
+        if peakHours:
+            time.sleep(1)
+        else:
+            machine.lightsleep(10000)
     except:
         pass
