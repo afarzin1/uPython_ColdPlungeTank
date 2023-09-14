@@ -279,10 +279,8 @@ while True:
                 picodebug.logPrint("Rotating logs",OutputToConsole,OutputToFile)
                 picodebug.logRotate()   
             
-             
-        
         #Reset due to mystery memory leak
-        if CycleLoopCounter == 1800:
+        if CycleLoopCounter == 3600:
             machine.reset()
             CycleLoopCounter = 0
         
@@ -314,7 +312,6 @@ while True:
             #remoteTerminal = str(timestamp) + " Cooling ended at " + str(round(coolingEnd_waterTemp,2)) + "deg \n"
             coolDownDegs = round(coolingEnd_waterTemp - coolingStart_waterTemp,2)
             remoteTerminal = str(timestamp) + " Cooled down water by " + str(coolDownDegs) + "deg in " + str(coolTimeMin) + " minutes with " + str(icepacks_added) + " ice packs \n"
-
             EventSent_CoolingActive = 0
             EventSent_CoolingActive_Off = 1
             
@@ -333,16 +330,16 @@ while True:
         blynk.virtual_write(7, FreeMem)
         blynk.virtual_write(8, FreeSpace)
         #blynk.log_event("cooling_started")
-        
-    
+
+        time.sleep(0.25)
+            
         picodebug.logPrint("Run Blynk",OutputToConsole,OutputToFile)
         
         blynk.run()
-        
+        time.sleep(0.25)
 
         #Remote requests
         if remoteTerminal == "update":
-            
             picodebug.logPrint("Remote request for firmare update",OutputToConsole,OutputToFile)
             ota_updater.download_and_install_update_if_available()
         if remoteTerminal == "reset":
