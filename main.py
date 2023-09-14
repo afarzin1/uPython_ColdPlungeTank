@@ -330,8 +330,6 @@ while True:
         blynk.virtual_write(7, FreeMem)
         blynk.virtual_write(8, FreeSpace)
         #blynk.log_event("cooling_started")
-
-        time.sleep(0.25)
             
         picodebug.logPrint("Run Blynk",OutputToConsole,OutputToFile)
         
