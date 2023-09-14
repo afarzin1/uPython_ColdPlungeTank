@@ -341,7 +341,11 @@ while True:
         #Remote requests
         if remoteTerminal == "update":
             picodebug.logPrint("Remote request for firmare update",OutputToConsole,OutputToFile)
-            ota_updater.download_and_install_update_if_available()
+            remoteTerminal = "Updating..."
+            blynk.run()
+            if not ota_updater.download_and_install_update_if_available():
+                remoteTerminal = "Update failed!"
+                blynk.run()
         if remoteTerminal == "reset":
             picodebug.logPrint("Remote request for reset",OutputToConsole,OutputToFile)
             machine.reset()
