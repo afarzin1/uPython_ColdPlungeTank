@@ -5,7 +5,7 @@ time.sleep(5)
 
 ver="1.16"
 devMode = False
-OutputToConsole = False
+OutputToConsole = 1
 OutputToFile = False
 
 #picodebug.logClean()
@@ -286,12 +286,11 @@ while True:
             CycleLoopCounter = 0
         
         #Calcualte number of ice packs needed
-        if firstScan:
-            if waterSetpoint != '':
-                picodebug.logPrint("Calculate ice packs",OutputToConsole,OutputToFile)
-                number_of_ice_packs = calculate_ice_packs(water_temperature, int(waterSetpoint))
-            else:
-                number_of_ice_packs = 0
+        if waterSetpoint != '':
+            picodebug.logPrint("Calculate ice packs",OutputToConsole,OutputToFile)
+            number_of_ice_packs = calculate_ice_packs(water_temperature, int(waterSetpoint))
+        else:
+            number_of_ice_packs = 0
 
         #Cooling On State
         if (coolingActive == '1') and (EventSent_CoolingActive == 0):
@@ -364,7 +363,7 @@ while True:
         gc.collect()
         
         if peakHours:
-            time.sleep(2)
+            time.sleep(3)
         else:
             time.sleep(10)
     except:
