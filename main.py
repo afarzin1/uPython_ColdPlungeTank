@@ -364,7 +364,7 @@ while True:
         gc.collect()
         
         if peakHours:
-            time.sleep(1)
+            time.sleep(2)
         else:
             time.sleep(10)
     except:
