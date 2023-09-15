@@ -342,17 +342,14 @@ while True:
         if remoteTerminal == "update":
             picodebug.logPrint("Remote request for firmare update",OutputToConsole,OutputToFile)
             remoteTerminal = "Looking for updates..."
-            blynk.virtual_write(5, remoteTerminal)
             blynk.run()
             time.sleep(0.25)
             if ota_updater.check_for_updates():
                 remoteTerminal = "Downloading new update"
-                blynk.virtual_write(5, remoteTerminal)
                 blynk.run()
                 time.sleep(0.25)
                 if ota_updater.fetch_latest_code():
                     remoteTerminal = "Installing new update"
-                    blynk.virtual_write(5, remoteTerminal)
                     blynk.run()
                     time.sleep(0.25)
                     ota_updater.update_no_reset()
@@ -363,7 +360,6 @@ while True:
                     time.sleep(0.25)
             else:
                 remoteTerminal = "No update available"
-                blynk.virtual_write(5, remoteTerminal)
                 blynk.run()
                 time.sleep(0.25)
             
