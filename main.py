@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="dev_fix console 0.1"
+ver="1.20"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
