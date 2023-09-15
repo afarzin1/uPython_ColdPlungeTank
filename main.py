@@ -336,15 +336,21 @@ while True:
         if cmdUpdate:
             picodebug.logPrint("Remote request for firmare update",OutputToConsole,OutputToFile)
             ota_updater.download_and_install_update_if_available()
+            cmdUpdate = False
         
         if cmdReset:
             picodebug.logPrint("Remote request for reset",OutputToConsole,OutputToFile)
             machine.reset()
+            cmdReset = False
         
         if cmdSoft_Rest:
             picodebug.logPrint("Remote request for soft reset",OutputToConsole,OutputToFile)
             machine.soft_reset()
+            cmdSoft_Rest = False
         
+        if cmdVer:
+            remoteTerminal = "\n" + str(ver)
+            cmdVer = False
         
         #Write outputs
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
