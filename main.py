@@ -40,7 +40,7 @@ EventSent_CoolingActive = 0
 EventSent_CoolingActive_Off = 0
 WaterTempSamples = []
 WaterTempAverage = -99.9
-water_temperature = 0.0
+water_temperature = -99.0
 coolingStart_iceCount = 0
 coolingStart_waterTemp = 0.0
 coolingEnd_waterTemp = 0.0
@@ -271,9 +271,10 @@ while True:
         if (CycleLoopCounter % 10) == 0:
             picodebug.logPrint("Entering 10s Loop",OutputToConsole,OutputToFile)
             #Average out 10, 1s samples of water and post that to blynk
-            if len(WaterTempSamples) > 0:
+            if len(WaterTempSamples) > 9:
                 WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
                 water_temperature = WaterTempAverage
+                WaterTempSamples.clear()
                            
         #30s Loop
         if (CycleLoopCounter % 30) and (CycleLoopCounter > 10) == 0:
@@ -305,7 +306,7 @@ while True:
         else:
             number_of_ice_packs = 0
 
-        #Cooling On State
+        #Cooling ON State
         if (coolingActive == '1') and (EventSent_CoolingActive == 0):
             state = 'cooling_started'
             blynk.log_event("cooling_started")
@@ -385,13 +386,14 @@ while True:
         if remoteTerminal == "ver":
             cmdVer = True
         
+        #Loop end cleanup
         CycleLoopCounter +=1
         firstScan = 1
         pin.off()
         
         #Cleanup loop memory
         remoteTerminal = ""
-        WaterTempSamples.clear()
+        
         picodebug.logPrint("Free memory: {}".format(FreeMem),OutputToConsole,OutputToFile) 
         picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole,OutputToFile)
         
