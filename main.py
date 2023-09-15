@@ -3,9 +3,9 @@ import machine
 
 time.sleep(5)
 
-ver="1.15"
-devMode = True
-OutputToConsole = True
+ver="1.16"
+devMode = False
+OutputToConsole = False
 OutputToFile = False
 
 #picodebug.logClean()
