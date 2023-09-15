@@ -3,9 +3,9 @@ import machine
 
 time.sleep(5)
 
-ver="1.16"
+ver="1.17"
 devMode = False
-OutputToConsole = 1
+OutputToConsole = False
 OutputToFile = False
 
 #picodebug.logClean()
@@ -51,7 +51,6 @@ cmdPing = False
 peakHours = True
 
 state = 'idle'
-remoteTerminal = "\nBooting up v" + ver + "\n"
 
 #Initialize weather look parameters
 weather_api_key = mySecrets.myWeatherAPI
@@ -155,6 +154,12 @@ def get_worldTime():
     except:
         return 0
 
+def GetTimestamp():
+    rawTime = machine.RTC().datetime()
+    print(rawTime)
+    timeStamp = str(rawTime[0]) + '-' + str(rawTime[1]) + '-' + str(rawTime[2]) + ' ' + str(rawTime[4]) + ':' + str(rawTime[5]) + ':' + str(rawTime[6])
+    return timeStamp
+
 def GetFreeSpace():
     # Get the status of the file system
     stat = os.statvfs('/')
@@ -211,6 +216,8 @@ except:
 
 FreeMem = gc.mem_free() / 1000
 FreeSpace = GetFreeSpace() / 1000
+
+remoteTerminal = GetTimestamp() +" Booting up v" + ver + "\n"
 
 #Initialize Blynk
 picodebug.logPrint("Initialize Blynk",OutputToConsole,OutputToFile)
@@ -282,7 +289,8 @@ while True:
             
         #Reset due to mystery memory leak
         if CycleLoopCounter == 3600:
-            machine.reset()
+            if state != 'cooling_started':
+                machine.reset()
             CycleLoopCounter = 0
         
         #Calcualte number of ice packs needed
@@ -298,12 +306,12 @@ while True:
             blynk.log_event("cooling_started")
             coolingStart_waterTemp = water_temperature
             coolStartMin = get_uptime_minutes()
-            remoteTerminal = str(timestamp) + " Cooling started at " + str(round(coolingStart_waterTemp,2)) + "deg \n"
+            remoteTerminal = GetTimestamp() + " Cooling started at " + str(round(coolingStart_waterTemp,2)) + "deg \n"
 
             EventSent_CoolingActive = 1
             EventSent_CoolingActive_Off = 0
         
-        #Cooling OFf State
+        #Cooling OFF State
         if state == 'cooling_started' and coolingActive == '0':
             state = 'idle'
             blynk.log_event("cooling_stopped")
@@ -312,7 +320,7 @@ while True:
             coolTimeMin = coolEndMin - coolStartMin
             #remoteTerminal = str(timestamp) + " Cooling ended at " + str(round(coolingEnd_waterTemp,2)) + "deg \n"
             coolDownDegs = round(coolingEnd_waterTemp - coolingStart_waterTemp,2)
-            remoteTerminal = str(timestamp) + " Cooled down water by " + str(coolDownDegs) + "deg in " + str(coolTimeMin) + " minutes with " + str(icepacks_added) + " ice packs \n"
+            remoteTerminal = GetTimestamp() + " Cooled down water by " + str(coolDownDegs) + "deg in " + str(coolTimeMin) + " minutes with " + str(icepacks_added) + " ice packs \n"
             EventSent_CoolingActive = 0
             EventSent_CoolingActive_Off = 1
             
