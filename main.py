@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.20"
+ver="1.21"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -258,7 +258,7 @@ while True:
         picodebug.logPrint("Check wifi",OutputToConsole,OutputToFile)
         ConnectWifi(0)
         
-        #Read Pi W temp sensor value
+        #Read Water Temperature
         picodebug.logPrint("Get temps",OutputToConsole,OutputToFile)
         sensor_temp = machine.ADC(4)
         conversion_factor = 3.3 / (65535)
@@ -266,7 +266,6 @@ while True:
         temperature = 27 - (reading - 0.706)/0.001721
         temp_calibrated = temperature - 9.0
         WaterTempSamples.append(temp_calibrated)
-        #print(temp_calibrated)
 
         #10s Loop
         if (CycleLoopCounter % 10) == 0:
@@ -275,17 +274,19 @@ while True:
             if len(WaterTempSamples) > 0:
                 WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
                 water_temperature = WaterTempAverage
-            
+                           
+        #30s Loop
+        if (CycleLoopCounter % 30) and (CycleLoopCounter > 10) == 0:
             #Get new ambient air data from API
             picodebug.logPrint("Get ambient temp",OutputToConsole,OutputToFile)
             try:
                 ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
             except:
-                picodebug.logPrint("Get temp failed")              
+                picodebug.logPrint("Get temp failed")  
         
         #900s Loop
         if CycleLoopCounter == 900:
-            #Look for firmware updates
+            #Rotate log files
             if OutputToFile:
                 picodebug.logPrint("Entering 900s Loop",OutputToConsole,OutputToFile)
                 picodebug.logPrint("Rotating logs",OutputToConsole,OutputToFile)
@@ -397,7 +398,7 @@ while True:
         gc.collect()
         
         if peakHours:
-            time.sleep(3)
+            time.sleep(1)
         else:
             time.sleep(10)
     except:
