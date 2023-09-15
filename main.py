@@ -252,7 +252,7 @@ while True:
     try:
         gc.collect()
         picodebug.logPrint("Get timestamp",OutputToConsole,OutputToFile)
-        timestamp = get_uptime()
+        #timestamp = get_uptime()
         
         #Main process ----------------------------------------------
         picodebug.logPrint("Check wifi",OutputToConsole,OutputToFile)
