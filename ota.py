@@ -167,4 +167,3 @@ class OTAUpdater:
                 self.update_and_reset()
         else:
             picodebug.logPrint("No new updates available")
-            return 0
