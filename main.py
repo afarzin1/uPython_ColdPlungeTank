@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.17"
+ver="dev_fix console 0.1"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -48,6 +48,10 @@ coolDownDegs = 0.0
 coolStartMin = 0
 coolEndMin = 0
 cmdPing = False
+cmdVer = False
+cmdUpdate = False
+cmdReset = False
+cmdSoft_Rest = False
 peakHours = True
 
 state = 'idle'
@@ -324,13 +328,26 @@ while True:
             EventSent_CoolingActive = 0
             EventSent_CoolingActive_Off = 1
             
-        #Write Values-------------------------------------------------
+        #Remote Console Command handling-------------------------------------------------
         if cmdPing:
             remoteTerminal = "\n" + str(CycleLoopCounter)
             cmdPing = False
         
+        if cmdUpdate:
+            picodebug.logPrint("Remote request for firmare update",OutputToConsole,OutputToFile)
+            ota_updater.download_and_install_update_if_available()
+        
+        if cmdReset:
+            picodebug.logPrint("Remote request for reset",OutputToConsole,OutputToFile)
+            machine.reset()
+        
+        if cmdSoft_Rest:
+            picodebug.logPrint("Remote request for soft reset",OutputToConsole,OutputToFile)
+            machine.soft_reset()
+        
+        
+        #Write outputs
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
-    
         if not devMode:
             blynk.virtual_write(0, ambient_temperature)
             blynk.virtual_write(1, water_temperature)
@@ -347,16 +364,19 @@ while True:
 
         #Remote requests
         if remoteTerminal == "update":
-            picodebug.logPrint("Remote request for firmare update",OutputToConsole,OutputToFile)
-            ota_updater.download_and_install_update_if_available()
+            cmdUpdate = True
+
         if remoteTerminal == "reset":
-            picodebug.logPrint("Remote request for reset",OutputToConsole,OutputToFile)
-            machine.reset()
+            cmdReset = True
+ 
         if remoteTerminal == "soft_reset":
-            picodebug.logPrint("Remote request for soft reset",OutputToConsole,OutputToFile)
-            machine.soft_reset()
+            cmdSoft_Rest = True
+
         if remoteTerminal == "ping":
             cmdPing = True
+        
+        if remoteTerminal == "ver":
+            cmdVer = True
         
         CycleLoopCounter +=1
         firstScan = 1
