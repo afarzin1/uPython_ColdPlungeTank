@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.37"
+ver="1.38"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -242,11 +242,14 @@ blynk = blynklib.Blynk(BLYNK_AUTH)
 @blynk.on("V*")
 def read_handler(pin, value):
     picodebug.logPrint("Blynk read handler called",OutputToConsole,OutputToFile)
-    global icepacks_added, coolingActive, waterSetpoint, remoteTerminal, FreeMem, FreeSpace
+    global icepacks_added, coolingActive, waterSetpoint, remoteTerminal, FreeMem, FreeSpace, number_of_ice_packs
 
     if pin == '2':
         icepacks_added = value[0]
         #print("Ice packs added: " + value[0])
+    if pin == '3':
+        number_of_ice_packs = value[0]
+    
     if pin == '4':
         coolingActive = value[0]
         #print("Cooling active is " + value[0])
