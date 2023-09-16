@@ -3,13 +3,12 @@ import machine
 
 time.sleep(5)
 
-ver="1.35"
+ver="1.36"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
 
 #picodebug.logClean()
-
 picodebug.logPrint("Initializing",OutputToConsole,OutputToFile)
 
 #turn on LED for first-scan
@@ -258,6 +257,9 @@ def read_handler(pin, value):
         waterSetpoint = value[0]
         #print("Water setpoint is " + value[0])
 
+#Read initial values
+blynk.run()
+time.sleep(0.25)
 
 #Main loop ------------------------------------------------
 picodebug.logPrint("Entering loop",OutputToConsole,OutputToFile)
