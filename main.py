@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.33"
+ver="1.34"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -396,7 +396,8 @@ while True:
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
         if not devMode:
             blynk.virtual_write(0, ambient_temperature)
-            blynk.virtual_write(1, water_temperature)
+            if water_temperature != -99.0:
+                blynk.virtual_write(1, water_temperature)
             blynk.virtual_write(3, number_of_ice_packs)
         blynk.virtual_write(5, remoteTerminal)
         blynk.virtual_write(7, FreeMem)
@@ -450,6 +451,7 @@ while True:
             time.sleep(1)
         else:
             picodebug.logPrint("Entering deep sleep",OutputToConsole,OutputToFile)
-            machine.lightsleep(120000)
+            wlan.active(False)
+            machine.deepsleep(180000)
     except:
         pass
