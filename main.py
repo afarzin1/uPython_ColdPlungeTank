@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.21"
+ver="1.30"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -52,7 +52,12 @@ cmdVer = False
 cmdUpdate = False
 cmdReset = False
 cmdSoft_Rest = False
+cmdPeakHours_ON = False
+cmdPeakHours_OFF = False
+cmdPeakHours_Auto = True
 peakHours = True
+peakHours_Start = 5
+peakHours_End = 10
 
 state = 'idle'
 
@@ -205,6 +210,14 @@ def calculate_ice_packs(T_initial, T_final):
     N = math.ceil(N)  # Round up to the nearest whole number
     return N
 
+def PeakHoursNow(startHour, EndHour):
+    rawTime = machine.RTC().datetime()
+    hour = rawTime[4]
+    if (hour >= startHour) and (hour < EndHour):
+        return 1
+    else:
+        return 0
+
 #Connect to Wifi
 picodebug.logPrint("Initial Wifi call",OutputToConsole,OutputToFile)
 ConnectWifi(1)
@@ -270,14 +283,27 @@ while True:
         #10s Loop
         if (CycleLoopCounter % 10) == 0:
             picodebug.logPrint("Entering 10s Loop",OutputToConsole,OutputToFile)
+            
             #Average out 10, 1s samples of water and post that to blynk
             if len(WaterTempSamples) > 9:
                 WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
                 water_temperature = WaterTempAverage
                 WaterTempSamples.clear()
+            
+            if (PeakHoursNow(peakHours_Start,peakHours_End)) or (cmdPeakHours_ON == True):
+                picodebug.logPrint("Peak Hours On",OutputToConsole,OutputToFile)
+                peakHours = True
+            else:
+                if (CycleLoopCounter > 10):
+                    picodebug.logPrint("Peak Hours Off",OutputToConsole,OutputToFile)
+                    peakHours = False
+            
+            if cmdPeakHours_OFF and (CycleLoopCounter > 10):
+                picodebug.logPrint("Peak Hours Off",OutputToConsole,OutputToFile)
+                peakHours = False
                            
         #30s Loop
-        if (CycleLoopCounter % 30) and (CycleLoopCounter > 10) == 0:
+        if (CycleLoopCounter % 30 == 0):
             #Get new ambient air data from API
             picodebug.logPrint("Get ambient temp",OutputToConsole,OutputToFile)
             try:
@@ -353,7 +379,19 @@ while True:
         if cmdVer:
             remoteTerminal = "\n" + str(ver)
             cmdVer = False
-        
+
+        if cmdPeakHours_ON:
+            cmdPeakHours_OFF = False
+            cmdPeakHours_Auto = False
+                    
+        if cmdPeakHours_OFF:
+            cmdPeakHours_ON = False
+            cmdPeakHours_Auto = False
+                    
+        if cmdPeakHours_Auto:
+            cmdPeakHours_OFF = False
+            cmdPeakHours_ON = False
+           
         #Write outputs
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
         if not devMode:
@@ -386,6 +424,15 @@ while True:
         if remoteTerminal == "ver":
             cmdVer = True
         
+        if remoteTerminal == "peakhours_on":
+            cmdPeakHours_ON = True
+        
+        if remoteTerminal == "peakhours_off":
+            cmdPeakHours_OFF = True
+
+        if remoteTerminal == "peakHours_auto":
+            cmdPeakHours_Auto = True
+            
         #Loop end cleanup
         CycleLoopCounter +=1
         firstScan = 1
@@ -402,6 +449,7 @@ while True:
         if peakHours:
             time.sleep(1)
         else:
-            time.sleep(10)
+            picodebug.logPrint("Entering deep sleep",OutputToConsole,OutputToFile)
+            machine.deepsleep(600000)
     except:
         pass
