@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.36"
+ver="1.37"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -449,11 +449,6 @@ while True:
         
         gc.collect()
         
-        if peakHours:
-            time.sleep(1)
-        else:
-            picodebug.logPrint("Entering deep sleep",OutputToConsole,OutputToFile)
-            wlan.active(False)
-            machine.deepsleep(180000)
+        time.sleep(1)
     except:
         pass
