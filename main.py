@@ -55,7 +55,7 @@ cmdPeakHours_ON = False
 cmdPeakHours_OFF = False
 cmdPeakHours_Auto = True
 peakHours = True
-peakHours_Start = 1
+peakHours_Start = 2
 peakHours_End = 1
 
 state = 'idle'
