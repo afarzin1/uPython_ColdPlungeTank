@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.32"
+ver="1.33"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -450,6 +450,6 @@ while True:
             time.sleep(1)
         else:
             picodebug.logPrint("Entering deep sleep",OutputToConsole,OutputToFile)
-            machine.deepsleep(120000)
+            machine.lightsleep(120000)
     except:
         pass
