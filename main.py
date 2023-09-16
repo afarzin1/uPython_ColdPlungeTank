@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.34"
+ver="1.35"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -56,8 +56,8 @@ cmdPeakHours_ON = False
 cmdPeakHours_OFF = False
 cmdPeakHours_Auto = True
 peakHours = True
-peakHours_Start = 5
-peakHours_End = 10
+peakHours_Start = 1
+peakHours_End = 1
 
 state = 'idle'
 
