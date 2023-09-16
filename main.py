@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.38"
+ver="1.40"
 devMode = False
 OutputToConsole = False
 OutputToFile = False
@@ -22,6 +22,7 @@ import math
 import machine
 import blynklib
 import gc
+import UPS
 
 #First scan initialization
 firstScan = 0
@@ -46,6 +47,7 @@ coolingEnd_waterTemp = 0.0
 coolDownDegs = 0.0
 coolStartMin = 0
 coolEndMin = 0
+batterySoC = 0
 cmdPing = False
 cmdVer = False
 cmdUpdate = False
@@ -75,6 +77,10 @@ wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 ssid = mySecrets.mySSID
 password = mySecrets.myWifiPassword
+
+#Init UPS
+# Create an ADS1115 ADC (16-bit) instance.
+UPS = UPS.INA219(addr=0x43)
 
 def ConnectWifi(printIP):
 
@@ -209,6 +215,14 @@ def calculate_ice_packs(T_initial, T_final):
     N = math.ceil(N)  # Round up to the nearest whole number
     return N
 
+def GetBatSoc():
+    bus_voltage = UPS.getBusVoltage_V()             # voltage on V- (load side)
+    current = UPS.getCurrent_mA()                   # current in mA
+    P = (bus_voltage -3)/1.2*100
+    if(P<0):P=0
+    elif(P>100):P=100
+    return P
+
 def PeakHoursNow(startHour, EndHour):
     rawTime = machine.RTC().datetime()
     hour = rawTime[4]
@@ -229,6 +243,9 @@ try:
 except:
     picodebug.logPrint("Failed to update clock",OutputToConsole,OutputToFile)
 
+
+#Get Battery SoC
+batterySoC = GetBatSoc()
 
 FreeMem = gc.mem_free() / 1000
 FreeSpace = GetFreeSpace() / 1000
@@ -285,6 +302,8 @@ while True:
         temp_calibrated = temperature - 9.0
         WaterTempSamples.append(temp_calibrated)
 
+        gc.collect()
+
         #10s Loop
         if (CycleLoopCounter % 10) == 0:
             picodebug.logPrint("Entering 10s Loop",OutputToConsole,OutputToFile)
@@ -314,7 +333,11 @@ while True:
             try:
                 ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
             except:
-                picodebug.logPrint("Get temp failed")  
+                picodebug.logPrint("Get temp failed")
+
+            #Get Battery SoC
+            picodebug.logPrint("Checking battery SoC:",OutputToConsole,OutputToFile)
+            batterySoC = GetBatSoc() 
         
         #900s Loop
         if CycleLoopCounter == 900:
@@ -336,6 +359,8 @@ while True:
             number_of_ice_packs = calculate_ice_packs(water_temperature, int(waterSetpoint))
         else:
             number_of_ice_packs = 0
+
+        gc.collect()
 
         #Cooling ON State
         if (coolingActive == '1') and (EventSent_CoolingActive == 0):
@@ -407,12 +432,14 @@ while True:
         blynk.virtual_write(5, remoteTerminal)
         blynk.virtual_write(7, FreeMem)
         blynk.virtual_write(8, FreeSpace)
+        blynk.virtual_write(10, batterySoC)
         #blynk.log_event("cooling_started")
             
         picodebug.logPrint("Run Blynk",OutputToConsole,OutputToFile)
         
         blynk.run()
         time.sleep(0.25)
+        gc.collect()
 
         #Remote requests
         if remoteTerminal == "update":
@@ -449,8 +476,6 @@ while True:
         
         picodebug.logPrint("Free memory: {}".format(FreeMem),OutputToConsole,OutputToFile) 
         picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole,OutputToFile)
-        
-        gc.collect()
         
         time.sleep(1)
     except:
