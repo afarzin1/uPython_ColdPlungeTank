@@ -309,7 +309,7 @@ while True:
         conversion_factor = 3.3 / (65535)
         reading = sensor_temp.read_u16() * conversion_factor 
         temperature = 27 - (reading - 0.706)/0.001721
-        temp_calibrated = temperature - 6.0
+        temp_calibrated = temperature - 5.6
         WaterTempSamples.append(temp_calibrated)
 
         #Check if peak usage hours
