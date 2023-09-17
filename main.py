@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.55"
+ver="1.56"
 devMode = False
 hasUPS = True
 OutputToConsole = False
@@ -313,7 +313,10 @@ while True:
         conversion_factor = 3.3 / (65535)
         reading = sensor_temp.read_u16() * conversion_factor 
         temperature = 27 - (reading - 0.706)/0.001721
-        temp_calibrated = temperature - 5.6
+        if peakHours:
+            temp_calibrated = temperature - 5.6
+        else:
+            temp_calibrated = temperature - 3.9
         WaterTempSamples.append(temp_calibrated)
 
         #Check if peak usage hours
