@@ -3,8 +3,9 @@ import machine
 
 time.sleep(5)
 
-ver="1.40"
+ver="1.5"
 devMode = False
+hasUPS = True
 OutputToConsole = False
 OutputToFile = False
 
@@ -27,7 +28,11 @@ import UPS
 #First scan initialization
 firstScan = 0
 CycleLoopCounter = 0
-BLYNK_AUTH = mySecrets.blynkauth
+
+if devMode:
+    BLYNK_AUTH = mySecrets.blynkauth_dev
+else:    
+    BLYNK_AUTH = mySecrets.blynkauth
 
 #Init Tags--------------------------------------------------
 icepacks_added = ""
@@ -57,8 +62,8 @@ cmdPeakHours_ON = False
 cmdPeakHours_OFF = False
 cmdPeakHours_Auto = True
 peakHours = True
-peakHours_Start = 2
-peakHours_End = 1
+peakHours_Start = 6
+peakHours_End = 11
 
 state = 'idle'
 
@@ -80,7 +85,8 @@ password = mySecrets.myWifiPassword
 
 #Init UPS
 # Create an ADS1115 ADC (16-bit) instance.
-UPS = UPS.INA219(addr=0x43)
+if hasUPS:
+    UPS = UPS.INA219(addr=0x43)
 
 def ConnectWifi(printIP):
 
@@ -216,12 +222,16 @@ def calculate_ice_packs(T_initial, T_final):
     return N
 
 def GetBatSoc():
-    bus_voltage = UPS.getBusVoltage_V()             # voltage on V- (load side)
-    current = UPS.getCurrent_mA()                   # current in mA
-    P = (bus_voltage -3)/1.2*100
-    if(P<0):P=0
-    elif(P>100):P=100
-    return P
+    global hasUPS
+    if hasUPS:
+        bus_voltage = UPS.getBusVoltage_V()             # voltage on V- (load side)
+        current = UPS.getCurrent_mA()                   # current in mA
+        P = (bus_voltage -3)/1.2*100
+        if(P<0):P=0
+        elif(P>100):P=100
+        return P
+    else:
+        return 1.11
 
 def PeakHoursNow(startHour, EndHour):
     rawTime = machine.RTC().datetime()
@@ -302,6 +312,14 @@ while True:
         temp_calibrated = temperature - 9.0
         WaterTempSamples.append(temp_calibrated)
 
+        #Check if peak usage hours
+        if (PeakHoursNow(peakHours_Start,peakHours_End)):
+            picodebug.logPrint("Peak Hours On",OutputToConsole,OutputToFile)
+            peakHours = True
+        else:
+            picodebug.logPrint("Peak Hours Off",OutputToConsole,OutputToFile)
+            peakHours = False   
+        
         gc.collect()
 
         #10s Loop
@@ -312,20 +330,7 @@ while True:
             if len(WaterTempSamples) > 9:
                 WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
                 water_temperature = WaterTempAverage
-                WaterTempSamples.clear()
-            
-            if (PeakHoursNow(peakHours_Start,peakHours_End)) or (cmdPeakHours_ON == True):
-                picodebug.logPrint("Peak Hours On",OutputToConsole,OutputToFile)
-                peakHours = True
-            else:
-                if (CycleLoopCounter > 10):
-                    picodebug.logPrint("Peak Hours Off",OutputToConsole,OutputToFile)
-                    peakHours = False
-            
-            if cmdPeakHours_OFF and (CycleLoopCounter > 10):
-                picodebug.logPrint("Peak Hours Off",OutputToConsole,OutputToFile)
-                peakHours = False
-                           
+                WaterTempSamples.clear()                           
         #30s Loop
         if (CycleLoopCounter % 30 == 0):
             #Get new ambient air data from API
@@ -339,8 +344,10 @@ while True:
             picodebug.logPrint("Checking battery SoC:",OutputToConsole,OutputToFile)
             batterySoC = GetBatSoc()
         #60s loop
-        #if (CycleLoopCounter % 60 == 0):
-        #   time.sleep(10)
+        if (CycleLoopCounter % 60 == 0) and CycleLoopCounter > 0:
+            if not peakHours:
+                machine.Pin(23, machine.Pin.OUT).low()
+                machine.deepsleep(600000)
         
         #900s Loop
         if CycleLoopCounter == 900:
@@ -412,31 +419,17 @@ while True:
         if cmdVer:
             remoteTerminal = "\n" + str(ver)
             cmdVer = False
-
-        if cmdPeakHours_ON:
-            cmdPeakHours_OFF = False
-            cmdPeakHours_Auto = False
-                    
-        if cmdPeakHours_OFF:
-            cmdPeakHours_ON = False
-            cmdPeakHours_Auto = False
-                    
-        if cmdPeakHours_Auto:
-            cmdPeakHours_OFF = False
-            cmdPeakHours_ON = False
            
         #Write outputs
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
-        if not devMode:
-            blynk.virtual_write(0, ambient_temperature)
-            if water_temperature != -99.0:
-                blynk.virtual_write(1, water_temperature)
-            blynk.virtual_write(3, number_of_ice_packs)
+        blynk.virtual_write(0, ambient_temperature)
+        if water_temperature != -99.0:
+            blynk.virtual_write(1, water_temperature)
+        blynk.virtual_write(3, number_of_ice_packs)
         blynk.virtual_write(5, remoteTerminal)
         blynk.virtual_write(7, FreeMem)
         blynk.virtual_write(8, FreeSpace)
         blynk.virtual_write(10, batterySoC)
-        #blynk.log_event("cooling_started")
             
         picodebug.logPrint("Run Blynk",OutputToConsole,OutputToFile)
         
@@ -459,15 +452,6 @@ while True:
         
         if remoteTerminal == "ver":
             cmdVer = True
-        
-        if remoteTerminal == "peakhours_on":
-            cmdPeakHours_ON = True
-        
-        if remoteTerminal == "peakhours_off":
-            cmdPeakHours_OFF = True
-
-        if remoteTerminal == "peakHours_auto":
-            cmdPeakHours_Auto = True
             
         #Loop end cleanup
         CycleLoopCounter +=1
