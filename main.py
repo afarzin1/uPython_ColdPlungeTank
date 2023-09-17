@@ -3,19 +3,20 @@ import machine
 
 time.sleep(5)
 
-ver="1.56"
-devMode = False
-hasUPS = True
-OutputToConsole = False
+#Board config----------------------------------------------
+ver="2.0"
+devMode = True
+hasUPS = False
+OutputToConsole = True
 OutputToFile = False
 
-#picodebug.logClean()
 picodebug.logPrint("Initializing",OutputToConsole,OutputToFile)
 
 #turn on LED for first-scan
 pin = machine.Pin("LED", machine.Pin.OUT)
 pin.on()
 
+#Library bulk import
 picodebug.logPrint("Importing libs",OutputToConsole,OutputToFile)
 import network,time,urequests,json, ntptime, os
 from ota import OTAUpdater
@@ -35,24 +36,33 @@ else:
     BLYNK_AUTH = mySecrets.blynkauth
 
 #Init Tags--------------------------------------------------
+#Written to Blynk
+ambient_temperature = ""
+water_temperature = -99.0
+remoteTerminal = ""
+waterTurbidity = 0.0
+FreeMem = 0.0
+FreeSpace = 0.0
+batterySoC = 0
+
+#Read from Blynk
 icepacks_added = ""
 coolingActive = ""
 waterSetpoint = ""
-consoleLog = ""
-ambient_temperature = ""
-remoteTerminal = ""
+remoteCommand = ""
+
+#Static
 EventSent_CoolingActive = 0
 EventSent_CoolingActive_Off = 0
 WaterTempSamples = []
 WaterTempAverage = -99.9
-water_temperature = -99.0
 coolingStart_iceCount = 0
 coolingStart_waterTemp = 0.0
 coolingEnd_waterTemp = 0.0
 coolDownDegs = 0.0
 coolStartMin = 0
 coolEndMin = 0
-batterySoC = 0
+
 cmdPing = False
 cmdVer = False
 cmdUpdate = False
@@ -61,12 +71,16 @@ cmdSoft_Rest = False
 cmdPeakHours_ON = False
 cmdPeakHours_OFF = False
 cmdPeakHours_Auto = True
+
+state = 'boot'
+
+#SETPOINT------------------------------------------------------
+#Peak Hour Setpoints
 peakHours = True
 peakHours_Start = 6
 peakHours_End = 11
 
-state = 'idle'
-
+#Initializations-----------------------------------------------
 #Initialize weather look parameters
 weather_api_key = mySecrets.myWeatherAPI
 lat = mySecrets.lat
@@ -241,6 +255,7 @@ def PeakHoursNow(startHour, EndHour):
     else:
         return 0
 
+#Pre-Loop------------------------------------------------------
 #Connect to Wifi
 picodebug.logPrint("Initial Wifi call",OutputToConsole,OutputToFile)
 try:
@@ -266,7 +281,7 @@ FreeSpace = GetFreeSpace() / 1000
 
 remoteTerminal = GetTimestamp() +" Booting up v" + ver + "\n"
 
-#Initialize Blynk
+#Initialize Blynk------------------------------------------------
 picodebug.logPrint("Initialize Blynk",OutputToConsole,OutputToFile)
 blynk = blynklib.Blynk(BLYNK_AUTH)
 
@@ -295,8 +310,9 @@ def read_handler(pin, value):
 blynk.run()
 time.sleep(0.25)
 
-#Main loop ------------------------------------------------
+#Main loop ------------------------------------------------------
 picodebug.logPrint("Entering loop",OutputToConsole,OutputToFile)
+
 while True:
     try:
         gc.collect()
