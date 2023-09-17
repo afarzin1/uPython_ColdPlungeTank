@@ -345,7 +345,7 @@ while True:
             batterySoC = GetBatSoc()
         #60s loop
         if (CycleLoopCounter % 60 == 0) and CycleLoopCounter > 0:
-            if not peakHours:
+            if (not peakHours) and (remoteTerminal != "force_wake"):
                 machine.Pin(23, machine.Pin.OUT).low()
                 machine.deepsleep(600000)
         
@@ -459,7 +459,8 @@ while True:
         pin.off()
         
         #Cleanup loop memory
-        remoteTerminal = ""
+        if remoteTerminal != "force_wake":
+            remoteTerminal = ""
         
         picodebug.logPrint("Free memory: {}".format(FreeMem),OutputToConsole,OutputToFile) 
         picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole,OutputToFile)
