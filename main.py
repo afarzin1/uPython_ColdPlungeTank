@@ -337,7 +337,10 @@ while True:
 
             #Get Battery SoC
             picodebug.logPrint("Checking battery SoC:",OutputToConsole,OutputToFile)
-            batterySoC = GetBatSoc() 
+            batterySoC = GetBatSoc()
+        #60s loop
+        #if (CycleLoopCounter % 60 == 0):
+        #   time.sleep(10)
         
         #900s Loop
         if CycleLoopCounter == 900:

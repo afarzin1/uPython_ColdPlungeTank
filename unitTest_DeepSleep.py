@@ -9,8 +9,8 @@ while counter<10:
     time.sleep(0.5)
     counter +=1
 
- #   if counter == 5:
-#        machine.deepsleep(5000)
+    if counter == 5:
+        machine.deepsleep(5000)
 
     if counter == 9:
         counter = 0
