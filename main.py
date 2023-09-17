@@ -243,7 +243,10 @@ def PeakHoursNow(startHour, EndHour):
 
 #Connect to Wifi
 picodebug.logPrint("Initial Wifi call",OutputToConsole,OutputToFile)
-ConnectWifi(1)
+try:
+    ConnectWifi(1)
+except:
+    machine.reset()
 
 #Update RTC to actual time
 picodebug.logPrint("Updating clock",OutputToConsole,OutputToFile)
@@ -252,6 +255,7 @@ try:
         picodebug.logPrint("Clock updated",OutputToConsole,OutputToFile)
 except:
     picodebug.logPrint("Failed to update clock",OutputToConsole,OutputToFile)
+    machine.reset()
 
 
 #Get Battery SoC
@@ -467,4 +471,4 @@ while True:
         
         time.sleep(1)
     except:
-        pass
+        machine.reset()
