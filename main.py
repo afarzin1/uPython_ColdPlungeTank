@@ -3,7 +3,7 @@ import machine
 
 time.sleep(5)
 
-ver="1.51"
+ver="1.55"
 devMode = False
 hasUPS = True
 OutputToConsole = False
