@@ -25,6 +25,7 @@ import machine
 import blynklib
 import gc
 import UPS
+import sys
 
 #First scan initialization
 firstScan = 0
@@ -255,7 +256,7 @@ def PeakHoursNow(startHour, EndHour):
     else:
         return 0
 
-#Pre-Loop------------------------------------------------------
+#Boot-Loop------------------------------------------------------
 #Connect to Wifi
 picodebug.logPrint("Initial Wifi call",OutputToConsole,OutputToFile)
 try:
@@ -272,13 +273,12 @@ except:
     picodebug.logPrint("Failed to update clock",OutputToConsole,OutputToFile)
     machine.reset()
 
-
-#Get Battery SoC
+#Get system resources
 batterySoC = GetBatSoc()
-
 FreeMem = gc.mem_free() / 1000
 FreeSpace = GetFreeSpace() / 1000
 
+#Write version to remote terminal
 remoteTerminal = GetTimestamp() +" Booting up v" + ver + "\n"
 
 #Initialize Blynk------------------------------------------------
@@ -292,23 +292,29 @@ def read_handler(pin, value):
 
     if pin == '2':
         icepacks_added = value[0]
-        #print("Ice packs added: " + value[0])
+
     if pin == '3':
         number_of_ice_packs = value[0]
-    
-    if pin == '4':
-        coolingActive = value[0]
-        #print("Cooling active is " + value[0])
-    if pin =='5':
-        remoteTerminal = value[0]
-        #print("Conole log: " + value[0])
+        
     if pin == '6':
         waterSetpoint = value[0]
-        #print("Water setpoint is " + value[0])
 
+    if pin =='11':
+        remoteCommand = value[0]
+        
 #Read initial values
 blynk.run()
 time.sleep(0.25)
+
+#Pre-Start Remote Command Check
+if remoteCommand == "update":
+    picodebug.logPrint("Pre-start commands",OutputToConsole,OutputToFile)
+    #Go into an update loop
+    #Exit state when update is done
+
+    picodebug.logPrint("Update requested",OutputToConsole,OutputToFile)
+picodebug.logPrint("No pre-start commands",OutputToConsole,OutputToFile)
+sys.exit()
 
 #Main loop ------------------------------------------------------
 picodebug.logPrint("Entering loop",OutputToConsole,OutputToFile)
