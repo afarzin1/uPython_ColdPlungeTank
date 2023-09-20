@@ -28,7 +28,7 @@ import UPS
 import sys
 
 #First scan initialization
-firstScan = 0
+firstScanDone = 0
 CycleLoopCounter = 0
 
 if devMode:
@@ -45,6 +45,7 @@ waterTurbidity = 0.0
 FreeMem = 0.0
 FreeSpace = 0.0
 batterySoC = 0
+number_of_ice_packs = 0
 
 #Read from Blynk
 icepacks_added = ""
@@ -255,6 +256,54 @@ def PeakHoursNow(startHour, EndHour):
         return 1
     else:
         return 0
+  
+def CheckRemoteCommands():
+    global remoteCommand
+    if remoteCommand == "update":
+        firmware_update()
+    if remoteCommand == "peakhours_auto":
+        peakHours_RemoteCommand()
+        remoteCommand = ""
+    if remoteCommand == "peakhours_on":
+        peakHours_RemoteCommand()
+    if remoteCommand == "peakhours_off":
+        peakHours_RemoteCommand()
+    if remoteCommand == "reset":
+        remoteCommand = ""
+        machine.reset()
+    if remoteCommand == "soft_reset":
+        remoteCommand = ""
+        machine.soft_reset()
+    if remoteCommand == "ver":
+        remoteCommand = ""
+        remoteTerminal = ver
+    if remoteCommand == "ping":
+        remoteCommand = ""
+        remoteTerminal = CycleLoopCounter
+
+def scale_turbidity(value, input_min=0, input_max=1.81, output_min=0, output_max=100):
+    scaled_value = ((value - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
+    return scaled_value
+
+def peakHours_RemoteCommand():
+    global remoteCommand
+    if remoteCommand == "peakhours_auto":
+        picodebug.logPrint("Peak hour control in auto",OutputToConsole,OutputToFile)
+        cmdPeakHours_Auto = True
+        cmdPeakHours_OFF = False
+        cmdPeakHours_ON = False
+        
+    if remoteCommand == "peakhours_on":
+        picodebug.logPrint("Peak hours forced on",OutputToConsole,OutputToFile)
+        cmdPeakHours_ON = True
+        cmdPeakHours_OFF = False
+        cmdPeakHours_Auto = False
+        
+    if remoteCommand == "peakhours_off":
+        picodebug.logPrint("Peak hours forced off",OutputToConsole,OutputToFile)
+        cmdPeakHours_OFF = True
+        cmdPeakHours_ON = False
+        cmdPeakHours_Auto = False
 
 #Boot-Loop------------------------------------------------------
 #Connect to Wifi
@@ -284,11 +333,23 @@ remoteTerminal = GetTimestamp() +" Booting up v" + ver + "\n"
 #Initialize Blynk------------------------------------------------
 picodebug.logPrint("Initialize Blynk",OutputToConsole,OutputToFile)
 blynk = blynklib.Blynk(BLYNK_AUTH)
+def firmware_update():
+    global remoteCommand
+    picodebug.logPrint("Update requested",OutputToConsole,OutputToFile)
+    if ota_updater.check_for_updates():
+        ota_updater.fetch_latest_code()
+        ota_updater.update_no_reset()
+        #Reset remote command
+        remoteCommand = ""
+        ota_updater.update_and_reset()
+    else:
+        picodebug.logPrint("No updates available",OutputToConsole,OutputToFile)
+        remoteCommand = ""
 
 @blynk.on("V*")
 def read_handler(pin, value):
     picodebug.logPrint("Blynk read handler called",OutputToConsole,OutputToFile)
-    global icepacks_added, coolingActive, waterSetpoint, remoteTerminal, FreeMem, FreeSpace, number_of_ice_packs
+    global icepacks_added, waterSetpoint, number_of_ice_packs, remoteCommand
 
     if pin == '2':
         icepacks_added = value[0]
@@ -302,32 +363,46 @@ def read_handler(pin, value):
     if pin =='11':
         remoteCommand = value[0]
         
-#Read initial values
-blynk.run()
-time.sleep(0.25)
-
-#Pre-Start Remote Command Check
-if remoteCommand == "update":
-    picodebug.logPrint("Pre-start commands",OutputToConsole,OutputToFile)
-    #Go into an update loop
-    #Exit state when update is done
-
-    picodebug.logPrint("Update requested",OutputToConsole,OutputToFile)
-picodebug.logPrint("No pre-start commands",OutputToConsole,OutputToFile)
-sys.exit()
+#Sync values from Server
+try:
+    i=0
+    while i < 2:
+        blynk.sync_virtual(2)
+        blynk.run()
+        time.sleep(0.5)
+        blynk.sync_virtual(3)
+        blynk.run()
+        time.sleep(0.5)
+        blynk.sync_virtual(6)
+        blynk.run()
+        time.sleep(0.5)
+        blynk.sync_virtual(5)
+        blynk.run()
+        time.sleep(0.5)
+        blynk.sync_virtual(11)
+        blynk.run()
+        time.sleep(0.5)
+        gc.collect()
+        i +=1
+except:
+    picodebug.logPrint("Initial blynk read failed",OutputToConsole,OutputToFile)
+    machine.reset()
 
 #Main loop ------------------------------------------------------
-picodebug.logPrint("Entering loop",OutputToConsole,OutputToFile)
+picodebug.logPrint("Entering main loop",OutputToConsole,OutputToFile)
 
 while True:
     try:
-        gc.collect()
-        picodebug.logPrint("Get timestamp",OutputToConsole,OutputToFile)
-        #timestamp = get_uptime()
-        
+        gc.collect()      
         #Main process ----------------------------------------------
         picodebug.logPrint("Check wifi",OutputToConsole,OutputToFile)
         ConnectWifi(0)
+        
+        #Check commands from remote terminal
+        picodebug.logPrint("Looking for remote commands...",OutputToConsole,OutputToFile)
+        remoteCommand = remoteCommand.strip()
+        if remoteCommand != "":
+            CheckRemoteCommands()
         
         #Read Water Temperature
         picodebug.logPrint("Get temps",OutputToConsole,OutputToFile)
@@ -341,56 +416,10 @@ while True:
             temp_calibrated = temperature - 3.9
         WaterTempSamples.append(temp_calibrated)
 
-        #Check if peak usage hours
-        if (PeakHoursNow(peakHours_Start,peakHours_End)):
-            picodebug.logPrint("Peak Hours On",OutputToConsole,OutputToFile)
-            peakHours = True
-        else:
-            picodebug.logPrint("Peak Hours Off",OutputToConsole,OutputToFile)
-            peakHours = False   
-        
-        gc.collect()
-
-        #10s Loop
-        if (CycleLoopCounter % 10) == 0:
-            picodebug.logPrint("Entering 10s Loop",OutputToConsole,OutputToFile)
-            
-            #Average out 10, 1s samples of water and post that to blynk
-            if len(WaterTempSamples) > 9:
-                WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
-                water_temperature = WaterTempAverage
-                WaterTempSamples.clear()                           
-        #30s Loop
-        if (CycleLoopCounter % 30 == 0):
-            #Get new ambient air data from API
-            picodebug.logPrint("Get ambient temp",OutputToConsole,OutputToFile)
-            try:
-                ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
-            except:
-                picodebug.logPrint("Get temp failed")
-
-            #Get Battery SoC
-            picodebug.logPrint("Checking battery SoC:",OutputToConsole,OutputToFile)
-            batterySoC = GetBatSoc()
-        #60s loop
-        if (CycleLoopCounter % 60 == 0) and CycleLoopCounter > 0:
-            if (not peakHours) and (remoteTerminal != "force_wake"):
-                machine.Pin(23, machine.Pin.OUT).low()
-                machine.deepsleep(600000)
-        
-        #900s Loop
-        if CycleLoopCounter == 900:
-            #Rotate log files
-            if OutputToFile:
-                picodebug.logPrint("Entering 900s Loop",OutputToConsole,OutputToFile)
-                picodebug.logPrint("Rotating logs",OutputToConsole,OutputToFile)
-                picodebug.logRotate()   
-            
-        #Reset due to mystery memory leak
-        if CycleLoopCounter == 3600:
-            if state != 'cooling_started':
-                machine.reset()
-            CycleLoopCounter = 0
+        #Read turbidity sensor
+        turbdity_sensor = machine.ADC(0)
+        turb_reading = turbdity_sensor.read_u16() * conversion_factor 
+        turbidity_scaled = scale_turbidity(turb_reading)
         
         #Calcualte number of ice packs needed
         if waterSetpoint != '':
@@ -399,8 +428,17 @@ while True:
         else:
             number_of_ice_packs = 0
 
+        #Check if peak usage hours
+        if (PeakHoursNow(peakHours_Start,peakHours_End)) or (cmdPeakHours_ON):
+            picodebug.logPrint("Peak Hours On",OutputToConsole,OutputToFile)
+            peakHours = True
+        if not (PeakHoursNow(peakHours_Start,peakHours_End)) or cmdPeakHours_OFF:
+            picodebug.logPrint("Peak Hours OFF",OutputToConsole,OutputToFile)
+            peakHours = False
+        
         gc.collect()
 
+        #Machine States
         #Cooling ON State
         if (coolingActive == '1') and (EventSent_CoolingActive == 0):
             state = 'cooling_started'
@@ -424,72 +462,76 @@ while True:
             remoteTerminal = GetTimestamp() + " Cooled down water by " + str(coolDownDegs) + "deg in " + str(coolTimeMin) + " minutes with " + str(icepacks_added) + " ice packs \n"
             EventSent_CoolingActive = 0
             EventSent_CoolingActive_Off = 1
+        
+        # Time slice loops ---------------------------------------------------------------
+        
+        # t0 and 10s Loop
+        if (CycleLoopCounter % 10) == 0:
+            picodebug.logPrint("Entering 10s Loop",OutputToConsole,OutputToFile)
             
-        #Remote Console Command handling-------------------------------------------------
-        if cmdPing:
-            remoteTerminal = "\n" + str(CycleLoopCounter)
-            cmdPing = False
+            #Average out 10, 1s samples of water and post that to blynk
+            if len(WaterTempSamples) > 9:
+                WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
+                water_temperature = WaterTempAverage
+                WaterTempSamples.clear()                           
+        #30s Loop
+        if (CycleLoopCounter % 30 == 0):
+            #Get new ambient air data from API
+            picodebug.logPrint("Get ambient temp",OutputToConsole,OutputToFile)
+            try:
+                ambient_temperature = get_current_ambient_temperature(weather_api_key, lat, lon)
+            except:
+                picodebug.logPrint("Get temp failed")
+
+            #Get Battery SoC
+            picodebug.logPrint("Checking battery SoC:",OutputToConsole,OutputToFile)
+            batterySoC = GetBatSoc()
+        #60s loop
+        if (CycleLoopCounter % 60 == 0) and CycleLoopCounter > 0:
+            if not peakHours:
+                machine.Pin(23, machine.Pin.OUT).low()
+                machine.deepsleep(600000)
+        #900s Loop
+        if CycleLoopCounter == 900:
+            #Rotate log files
+            if OutputToFile:
+                picodebug.logPrint("Entering 900s Loop",OutputToConsole,OutputToFile)
+                picodebug.logPrint("Rotating logs",OutputToConsole,OutputToFile)
+                picodebug.logRotate()   
+            
+        #3600s Loop
+        #Reset due to mystery memory leak
+        if CycleLoopCounter == 3600:
+            if state != 'cooling_started':
+                machine.reset()
+            CycleLoopCounter = 0
         
-        if cmdUpdate:
-            picodebug.logPrint("Remote request for firmare update",OutputToConsole,OutputToFile)
-            ota_updater.download_and_install_update_if_available()
-            cmdUpdate = False
-        
-        if cmdReset:
-            picodebug.logPrint("Remote request for reset",OutputToConsole,OutputToFile)
-            machine.reset()
-            cmdReset = False
-        
-        if cmdSoft_Rest:
-            picodebug.logPrint("Remote request for soft reset",OutputToConsole,OutputToFile)
-            machine.soft_reset()
-            cmdSoft_Rest = False
-        
-        if cmdVer:
-            remoteTerminal = "\n" + str(ver)
-            cmdVer = False
-           
-        #Write outputs
+        gc.collect()
+          
+        #Write outputs to blynk
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
         blynk.virtual_write(0, ambient_temperature)
         if water_temperature != -99.0:
             blynk.virtual_write(1, water_temperature)
-        blynk.virtual_write(3, number_of_ice_packs)
+            blynk.virtual_write(3, number_of_ice_packs)
         blynk.virtual_write(5, remoteTerminal)
         blynk.virtual_write(7, FreeMem)
         blynk.virtual_write(8, FreeSpace)
+        blynk.virtual_write(9, turbidity_scaled)
         blynk.virtual_write(10, batterySoC)
             
         picodebug.logPrint("Run Blynk",OutputToConsole,OutputToFile)
-        
         blynk.run()
-        time.sleep(0.25)
+        time.sleep(0.5)
         gc.collect()
-
-        #Remote requests
-        if remoteTerminal == "update":
-            cmdUpdate = True
-
-        if remoteTerminal == "reset":
-            cmdReset = True
- 
-        if remoteTerminal == "soft_reset":
-            cmdSoft_Rest = True
-
-        if remoteTerminal == "ping":
-            cmdPing = True
-        
-        if remoteTerminal == "ver":
-            cmdVer = True
             
         #Loop end cleanup
         CycleLoopCounter +=1
-        firstScan = 1
+        firstScanDone = 1
         pin.off()
         
         #Cleanup loop memory
-        if remoteTerminal != "force_wake":
-            remoteTerminal = ""
+        remoteTerminal = ""
         
         picodebug.logPrint("Free memory: {}".format(FreeMem),OutputToConsole,OutputToFile) 
         picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole,OutputToFile)
