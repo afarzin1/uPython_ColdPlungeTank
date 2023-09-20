@@ -21,7 +21,6 @@ picodebug.logPrint("Importing libs",OutputToConsole,OutputToFile)
 import network,time,urequests,json, ntptime, os
 from ota import OTAUpdater
 import math
-import machine
 import blynklib
 import gc
 import UPS
