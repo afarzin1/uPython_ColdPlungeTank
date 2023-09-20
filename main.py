@@ -5,9 +5,9 @@ time.sleep(5)
 
 #Board config----------------------------------------------
 ver="2.0"
-devMode = True
-hasUPS = False
-OutputToConsole = True
+devMode = False
+hasUPS = True
+OutputToConsole = False
 OutputToFile = False
 
 picodebug.logPrint("Initializing",OutputToConsole,OutputToFile)
