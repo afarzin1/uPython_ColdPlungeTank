@@ -4,7 +4,7 @@ import machine
 time.sleep(5)
 
 #Board config----------------------------------------------
-ver="2.0"
+ver="2.2"
 devMode = False
 hasUPS = True
 OutputToConsole = False
@@ -281,7 +281,7 @@ def CheckRemoteCommands():
         remoteCommand = ""
         remoteTerminal = CycleLoopCounter
 
-def scale_turbidity(value, input_min=0, input_max=1.71, output_min=0, output_max=100):
+def scale_turbidity(value, input_min=0, input_max=1.8, output_min=0, output_max=100):
     scaled_value = ((value - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
     return scaled_value
 
