@@ -25,6 +25,7 @@ import blynklib
 import gc
 import UPS
 import sys
+import onewire, ds18x20
 
 #First scan initialization
 firstScanDone = 0
@@ -280,7 +281,7 @@ def CheckRemoteCommands():
         remoteCommand = ""
         remoteTerminal = CycleLoopCounter
 
-def scale_turbidity(value, input_min=0, input_max=1.81, output_min=0, output_max=100):
+def scale_turbidity(value, input_min=0, input_max=1.71, output_min=0, output_max=100):
     scaled_value = ((value - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
     return scaled_value
 
@@ -415,6 +416,13 @@ while True:
             temp_calibrated = temperature - 3.9
         WaterTempSamples.append(temp_calibrated)
 
+        #Read External temp sensor
+        temp_pin = machine.Pin(22)
+        temp_sensor = ds18x20.DS18X20(onewire.OneWire(temp_pin))
+        roms = temp_sensor.scan()
+        temp_sensor.convert_temp()
+        extWaterTemp = temp_sensor.read_temp(roms[0])
+        
         #Read turbidity sensor
         turbdity_sensor = machine.ADC(0)
         turb_reading = turbdity_sensor.read_u16() * conversion_factor 
@@ -511,7 +519,7 @@ while True:
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
         blynk.virtual_write(0, ambient_temperature)
         if water_temperature != -99.0:
-            blynk.virtual_write(1, water_temperature)
+            blynk.virtual_write(1, extWaterTemp)
             blynk.virtual_write(3, number_of_ice_packs)
         blynk.virtual_write(5, remoteTerminal)
         blynk.virtual_write(7, FreeMem)
