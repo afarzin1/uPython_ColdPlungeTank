@@ -4,7 +4,7 @@ import machine
 time.sleep(5)
 
 #Board config----------------------------------------------
-ver="2.2"
+ver="2.4"
 devMode = False
 hasUPS = True
 OutputToConsole = False
@@ -193,7 +193,7 @@ def get_worldTime():
 def GetTimestamp():
     rawTime = machine.RTC().datetime()
     print(rawTime)
-    timeStamp = str(rawTime[0]) + '-' + str(rawTime[1]) + '-' + str(rawTime[2]) + ' ' + str(rawTime[4]) + ':' + str(rawTime[5]) + ':' + str(rawTime[6])
+    timeStamp = str(rawTime[0]) + '-' + str(rawTime[1]) + '-' + str(rawTime[2]) + ' ' + str(rawTime[4]) + ':' + str(rawTime[5]) + ':' + str(rawTime[6]) + " "
     return timeStamp
 
 def GetFreeSpace():
@@ -258,48 +258,59 @@ def PeakHoursNow(startHour, EndHour):
         return 0
   
 def CheckRemoteCommands():
-    global remoteCommand
-    if remoteCommand == "update":
+    global remoteCommand, ver, CycleLoopCounter, remoteTerminal
+    if remoteCommand == "Update":
         firmware_update()
-    if remoteCommand == "peakhours_auto":
+    if remoteCommand == "Peakhours_auto":
+        remoteTerminal = GetTimestamp() + "Setting peak hours to AUTO"
         peakHours_RemoteCommand()
         remoteCommand = ""
-    if remoteCommand == "peakhours_on":
+    if remoteCommand == "Peakhours_on":
+        remoteTerminal = GetTimestamp() + "Setting peak hours to ON"
         peakHours_RemoteCommand()
-    if remoteCommand == "peakhours_off":
+        remoteCommand = ""
+        
+    if remoteCommand == "Peakhours_off":
+        remoteTerminal = GetTimestamp() + "Setting peak hours to OFF"
         peakHours_RemoteCommand()
-    if remoteCommand == "reset":
+        remoteCommand = ""
+        
+    if remoteCommand == "Reset":
+        remoteTerminal = GetTimestamp() + "Remote reset requested"
         remoteCommand = ""
         machine.reset()
-    if remoteCommand == "soft_reset":
+    if remoteCommand == "Soft_reset":
+        remoteTerminal = GetTimestamp() + "Remote soft reset requested"
         remoteCommand = ""
         machine.soft_reset()
-    if remoteCommand == "ver":
+    if remoteCommand == "Ver":
+        remoteTerminal = GetTimestamp() + "App version: " + ver
         remoteCommand = ""
-        remoteTerminal = ver
-    if remoteCommand == "ping":
+        
+    if remoteCommand == "Ping":
+        remoteTerminal = GetTimestamp() + "Cycle counter:" + str(CycleLoopCounter)
         remoteCommand = ""
-        remoteTerminal = CycleLoopCounter
+        
 
 def scale_turbidity(value, input_min=0, input_max=1.8, output_min=0, output_max=100):
     scaled_value = ((value - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
     return scaled_value
 
 def peakHours_RemoteCommand():
-    global remoteCommand
-    if remoteCommand == "peakhours_auto":
+    global remoteCommand, cmdPeakHours_Auto, cmdPeakHours_OFF, cmdPeakHours_ON
+    if remoteCommand == "Peakhours_auto":
         picodebug.logPrint("Peak hour control in auto",OutputToConsole,OutputToFile)
         cmdPeakHours_Auto = True
         cmdPeakHours_OFF = False
         cmdPeakHours_ON = False
         
-    if remoteCommand == "peakhours_on":
+    if remoteCommand == "Peakhours_on":
         picodebug.logPrint("Peak hours forced on",OutputToConsole,OutputToFile)
         cmdPeakHours_ON = True
         cmdPeakHours_OFF = False
         cmdPeakHours_Auto = False
         
-    if remoteCommand == "peakhours_off":
+    if remoteCommand == "Peakhours_off":
         picodebug.logPrint("Peak hours forced off",OutputToConsole,OutputToFile)
         cmdPeakHours_OFF = True
         cmdPeakHours_ON = False
@@ -328,7 +339,7 @@ FreeMem = gc.mem_free() / 1000
 FreeSpace = GetFreeSpace() / 1000
 
 #Write version to remote terminal
-remoteTerminal = GetTimestamp() +" Booting up v" + ver + "\n"
+remoteTerminal = GetTimestamp() +" Booting up v" + ver
 
 #Initialize Blynk------------------------------------------------
 picodebug.logPrint("Initialize Blynk",OutputToConsole,OutputToFile)
@@ -439,7 +450,7 @@ while True:
         if (PeakHoursNow(peakHours_Start,peakHours_End)) or (cmdPeakHours_ON):
             picodebug.logPrint("Peak Hours On",OutputToConsole,OutputToFile)
             peakHours = True
-        if not (PeakHoursNow(peakHours_Start,peakHours_End)) or cmdPeakHours_OFF:
+        else:
             picodebug.logPrint("Peak Hours OFF",OutputToConsole,OutputToFile)
             peakHours = False
         
@@ -452,7 +463,7 @@ while True:
             blynk.log_event("cooling_started")
             coolingStart_waterTemp = water_temperature
             coolStartMin = get_uptime_minutes()
-            remoteTerminal = GetTimestamp() + " Cooling started at " + str(round(coolingStart_waterTemp,2)) + "deg \n"
+            remoteTerminal = GetTimestamp() + " Cooling started at " + str(round(coolingStart_waterTemp,2)) + "deg"
 
             EventSent_CoolingActive = 1
             EventSent_CoolingActive_Off = 0
@@ -464,7 +475,7 @@ while True:
             coolingEnd_waterTemp = water_temperature
             coolEndMin = get_uptime_minutes()
             coolTimeMin = coolEndMin - coolStartMin
-            #remoteTerminal = str(timestamp) + " Cooling ended at " + str(round(coolingEnd_waterTemp,2)) + "deg \n"
+            #remoteTerminal = str(timestamp) + " Cooling ended at " + str(round(coolingEnd_waterTemp,2)) + "deg"
             coolDownDegs = round(coolingEnd_waterTemp - coolingStart_waterTemp,2)
             remoteTerminal = GetTimestamp() + " Cooled down water by " + str(coolDownDegs) + "deg in " + str(coolTimeMin) + " minutes with " + str(icepacks_added) + " ice packs \n"
             EventSent_CoolingActive = 0
