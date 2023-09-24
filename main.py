@@ -4,7 +4,7 @@ import machine
 time.sleep(5)
 
 #Board config----------------------------------------------
-ver="2.5"
+ver="2.6"
 devMode = False
 hasUPS = True
 OutputToConsole = False
@@ -260,6 +260,7 @@ def PeakHoursNow(startHour, EndHour):
 def CheckRemoteCommands():
     global remoteCommand, ver, CycleLoopCounter, remoteTerminal
     if remoteCommand == "Update":
+        remoteTerminal = GetTimestamp() + "Remote update requested"
         firmware_update()
     if remoteCommand == "Peakhours_auto":
         remoteTerminal = GetTimestamp() + "Setting peak hours to AUTO"
