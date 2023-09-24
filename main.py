@@ -4,7 +4,7 @@ import machine
 time.sleep(5)
 
 #Board config----------------------------------------------
-ver="2.4"
+ver="2.5"
 devMode = False
 hasUPS = True
 OutputToConsole = False
@@ -39,7 +39,7 @@ else:
 #Init Tags--------------------------------------------------
 #Written to Blynk
 ambient_temperature = ""
-water_temperature = -99.0
+board_temperature = -99.0
 remoteTerminal = ""
 waterTurbidity = 0.0
 FreeMem = 0.0
@@ -56,8 +56,8 @@ remoteCommand = ""
 #Static
 EventSent_CoolingActive = 0
 EventSent_CoolingActive_Off = 0
-WaterTempSamples = []
-WaterTempAverage = -99.9
+BoardTempSamples = []
+BoardTempAverage = -99.9
 coolingStart_iceCount = 0
 coolingStart_waterTemp = 0.0
 coolingEnd_waterTemp = 0.0
@@ -425,7 +425,7 @@ while True:
             temp_calibrated = temperature - 5.6
         else:
             temp_calibrated = temperature - 3.9
-        WaterTempSamples.append(temp_calibrated)
+        BoardTempSamples.append(temp_calibrated)
 
         #Read External temp sensor
         temp_pin = machine.Pin(22)
@@ -442,7 +442,7 @@ while True:
         #Calcualte number of ice packs needed
         if waterSetpoint != '':
             picodebug.logPrint("Calculate ice packs",OutputToConsole,OutputToFile)
-            number_of_ice_packs = calculate_ice_packs(water_temperature, int(waterSetpoint))
+            number_of_ice_packs = calculate_ice_packs(extWaterTemp, int(waterSetpoint))
         else:
             number_of_ice_packs = 0
 
@@ -461,7 +461,7 @@ while True:
         if (coolingActive == '1') and (EventSent_CoolingActive == 0):
             state = 'cooling_started'
             blynk.log_event("cooling_started")
-            coolingStart_waterTemp = water_temperature
+            coolingStart_waterTemp = extWaterTemp
             coolStartMin = get_uptime_minutes()
             remoteTerminal = GetTimestamp() + " Cooling started at " + str(round(coolingStart_waterTemp,2)) + "deg"
 
@@ -472,7 +472,7 @@ while True:
         if state == 'cooling_started' and coolingActive == '0':
             state = 'idle'
             blynk.log_event("cooling_stopped")
-            coolingEnd_waterTemp = water_temperature
+            coolingEnd_waterTemp = extWaterTemp
             coolEndMin = get_uptime_minutes()
             coolTimeMin = coolEndMin - coolStartMin
             #remoteTerminal = str(timestamp) + " Cooling ended at " + str(round(coolingEnd_waterTemp,2)) + "deg"
@@ -488,10 +488,10 @@ while True:
             picodebug.logPrint("Entering 10s Loop",OutputToConsole,OutputToFile)
             
             #Average out 10, 1s samples of water and post that to blynk
-            if len(WaterTempSamples) > 9:
-                WaterTempAverage = sum(WaterTempSamples) / len(WaterTempSamples)
-                water_temperature = WaterTempAverage
-                WaterTempSamples.clear()                           
+            if len(BoardTempSamples) > 9:
+                BoardTempAverage = sum(BoardTempSamples) / len(BoardTempSamples)
+                board_temperature = BoardTempAverage
+                BoardTempSamples.clear()                           
         #30s Loop
         if (CycleLoopCounter % 30 == 0):
             #Get new ambient air data from API
@@ -529,9 +529,8 @@ while True:
         #Write outputs to blynk
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
         blynk.virtual_write(0, ambient_temperature)
-        if water_temperature != -99.0:
-            blynk.virtual_write(1, extWaterTemp)
-            blynk.virtual_write(3, number_of_ice_packs)
+        blynk.virtual_write(1, extWaterTemp)
+        blynk.virtual_write(3, number_of_ice_packs)
         blynk.virtual_write(5, remoteTerminal)
         blynk.virtual_write(7, FreeMem)
         blynk.virtual_write(8, FreeSpace)
