@@ -7,7 +7,7 @@ time.sleep(5)
 ver="2.6"
 devMode = False
 hasUPS = True
-OutputToConsole = False
+OutputToConsole = True
 OutputToFile = False
 
 picodebug.logPrint("Initializing",OutputToConsole,OutputToFile)
