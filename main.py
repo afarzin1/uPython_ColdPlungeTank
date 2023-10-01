@@ -1,410 +1,413 @@
 import time, picodebug, mySecrets
 import machine
 
-time.sleep(5)
-
-#Board config----------------------------------------------
-ver="2.6"
-devMode = False
-hasUPS = True
-OutputToConsole = True
-OutputToFile = False
-
-picodebug.logPrint("Initializing",OutputToConsole,OutputToFile)
-
-#turn on LED for first-scan
-pin = machine.Pin("LED", machine.Pin.OUT)
-pin.on()
-
-#Library bulk import
-picodebug.logPrint("Importing libs",OutputToConsole,OutputToFile)
-import network,time,urequests,json, ntptime, os
-from ota import OTAUpdater
-import math
-import blynklib
-import gc
-import UPS
-import sys
-import onewire, ds18x20
-
-#First scan initialization
-firstScanDone = 0
-CycleLoopCounter = 0
-
-if devMode:
-    BLYNK_AUTH = mySecrets.blynkauth_dev
-else:    
-    BLYNK_AUTH = mySecrets.blynkauth
-
-#Init Tags--------------------------------------------------
-#Written to Blynk
-ambient_temperature = ""
-board_temperature = -99.0
-remoteTerminal = ""
-waterTurbidity = 0.0
-FreeMem = 0.0
-FreeSpace = 0.0
-batterySoC = 0
-number_of_ice_packs = 0
-
-#Read from Blynk
-icepacks_added = ""
-coolingActive = ""
-waterSetpoint = ""
-remoteCommand = ""
-
-#Static
-EventSent_CoolingActive = 0
-EventSent_CoolingActive_Off = 0
-BoardTempSamples = []
-BoardTempAverage = -99.9
-coolingStart_iceCount = 0
-coolingStart_waterTemp = 0.0
-coolingEnd_waterTemp = 0.0
-coolDownDegs = 0.0
-coolStartMin = 0
-coolEndMin = 0
-
-cmdPing = False
-cmdVer = False
-cmdUpdate = False
-cmdReset = False
-cmdSoft_Rest = False
-cmdPeakHours_ON = False
-cmdPeakHours_OFF = False
-cmdPeakHours_Auto = True
-
-state = 'boot'
-
-#SETPOINT------------------------------------------------------
-#Peak Hour Setpoints
-peakHours = True
-peakHours_Start = 6
-peakHours_End = 11
-
-#Initializations-----------------------------------------------
-#Initialize weather look parameters
-weather_api_key = mySecrets.myWeatherAPI
-lat = mySecrets.lat
-lon = mySecrets.lon
-
-#Initialize OTA
-firmware_url = "github.com/repos/afarzin1/uPython_ColdPlungeTank"
-ota_updater = OTAUpdater("coldPlungeTank",firmware_url, "main.py")
-
-#Init WIFI
-picodebug.logPrint("Initializing WIFI",OutputToConsole,OutputToFile)
-wlan = network.WLAN(network.STA_IF)
-wlan.active(True)
-ssid = mySecrets.mySSID
-password = mySecrets.myWifiPassword
-
-#Init UPS
-# Create an ADS1115 ADC (16-bit) instance.
-if hasUPS:
-    UPS = UPS.INA219(addr=0x43)
-
-def ConnectWifi(printIP):
-
-    attemptCounter = 0
+try:
     
-    if not wlan.isconnected():
-        while not wlan.isconnected():
-            if attemptCounter == 5:
-                picodebug.logPrint("Wifi not connecting, rebooting...",OutputToConsole,OutputToFile)
-                machine.reset()
-            print("Trying to connect...")
-            wlan.connect(ssid, password)
-            pin.toggle()
-            attemptCounter += 1
-            time.sleep(3)
-    if wlan.isconnected():
-            
-        status = wlan.ifconfig()
-        if printIP:
-            print("Connected to Wifi")
-            print( 'ip = ' + status[0] )
 
-def get_uptime():
-    # Get the current uptime in milliseconds
-    uptime_ms = time.ticks_ms()
-    
-    # Calculate hours, minutes, and seconds
-    uptime_s = uptime_ms // 1000
-    hours = uptime_s // 3600
-    minutes = (uptime_s % 3600) // 60
-    seconds = uptime_s % 60
-    
-    return "{}:{}:{}".format(hours, minutes, seconds)
+    time.sleep(5)
 
-def get_uptime_minutes():
-    # Get the current uptime in milliseconds
-    uptime_ms = time.ticks_ms()
-    
-    # Calculate hours, minutes, and seconds
-    uptime_s = uptime_ms // 1000
-    minutes = (uptime_s % 3600) // 60
+    #Board config----------------------------------------------
+    ver="2.7"
+    devMode = False
+    hasUPS = True
+    OutputToConsole = False
+    OutputToFile = False
 
-    return minutes
+    picodebug.logPrint("Initializing",OutputToConsole,OutputToFile)
 
-def is_dst(time_tuple):
-    # DST starts on the second Sunday in March
-    dst_start = time.mktime((time_tuple[0], 3, 8, 2, 0, 0, 0, 0))
-    # DST ends on the first Sunday in November
-    dst_end = time.mktime((time_tuple[0], 11, 1, 2, 0, 0, 0, 0))
-    
-    # Find the actual DST start and end times for the current year
-    while time.localtime(dst_start)[6] != 6:  # Sunday
-        dst_start += 86400  # Add one day
-    while time.localtime(dst_end)[6] != 6:  # Sunday
-        dst_end += 86400  # Add one day
-    
-    current_time_seconds = time.mktime(time_tuple)
-    
-    return current_time_seconds >= dst_start and current_time_seconds < dst_end
+    #turn on LED for first-scan
+    pin = machine.Pin("LED", machine.Pin.OUT)
+    pin.on()
 
-def get_worldTime():
-    ntptime.host = 'pool.ntp.org'
-    
-    try:
-        ntptime.settime()
+    #Library bulk import
+    picodebug.logPrint("Importing libs",OutputToConsole,OutputToFile)
+    import network,time,urequests,json, ntptime, os
+    from ota import OTAUpdater
+    import math
+    import blynklib
+    import gc
+    import UPS
+    import sys
+    import onewire, ds18x20
 
-        # Initialize RTC
-        rtc = machine.RTC()
+    #First scan initialization
+    firstScanDone = 0
+    CycleLoopCounter = 0
 
-        # Get the updated time
-        current_time = time.localtime()
+    if devMode:
+        BLYNK_AUTH = mySecrets.blynkauth_dev
+    else:    
+        BLYNK_AUTH = mySecrets.blynkauth
 
-        # Convert to PST (UTC - 8 hours) or PDT (UTC - 7 hours)
-        offset = -28800  # PST: 8 hours * 60 minutes/hour * 60 seconds/minute
-        if is_dst(current_time):
-            offset += 3600  # Add 1 hour for Daylight Saving Time
+    #Init Tags--------------------------------------------------
+    #Written to Blynk
+    ambient_temperature = ""
+    board_temperature = -99.0
+    remoteTerminal = ""
+    waterTurbidity = 0.0
+    FreeMem = 0.0
+    FreeSpace = 0.0
+    batterySoC = 0
+    number_of_ice_packs = 0
 
-        pst_time = time.mktime(current_time) + offset
-        pst_time = time.localtime(pst_time)
+    #Read from Blynk
+    icepacks_added = ""
+    coolingActive = ""
+    waterSetpoint = ""
+    remoteCommand = ""
 
-        # Set the RTC time
-        rtc.datetime((pst_time[0], pst_time[1], pst_time[2], pst_time[6], pst_time[3], pst_time[4], pst_time[5], 0))
-        time.sleep(1)
-        return 1
-    except:
-        return 0
+    #Static
+    EventSent_CoolingActive = 0
+    EventSent_CoolingActive_Off = 0
+    BoardTempSamples = []
+    BoardTempAverage = -99.9
+    coolingStart_iceCount = 0
+    coolingStart_waterTemp = 0.0
+    coolingEnd_waterTemp = 0.0
+    coolDownDegs = 0.0
+    coolStartMin = 0
+    coolEndMin = 0
 
-def GetTimestamp():
-    rawTime = machine.RTC().datetime()
-    print(rawTime)
-    timeStamp = str(rawTime[0]) + '-' + str(rawTime[1]) + '-' + str(rawTime[2]) + ' ' + str(rawTime[4]) + ':' + str(rawTime[5]) + ':' + str(rawTime[6]) + " "
-    return timeStamp
+    cmdPing = False
+    cmdVer = False
+    cmdUpdate = False
+    cmdReset = False
+    cmdSoft_Rest = False
+    cmdPeakHours_ON = False
+    cmdPeakHours_OFF = False
+    cmdPeakHours_Auto = True
 
-def GetFreeSpace():
-    # Get the status of the file system
-    stat = os.statvfs('/')
+    state = 'boot'
 
-    # Calculate the available space
-    block_size = stat[0]  # Size of a block
-    total_blocks = stat[2]  # Total data blocks in the file system
-    free_blocks = stat[3]  # Free blocks in the file system
+    #SETPOINT------------------------------------------------------
+    #Peak Hour Setpoints
+    peakHours = True
+    peakHours_Start = 6
+    peakHours_End = 11
 
-    # Calculate total and free space in bytes
-    total_space = block_size * total_blocks
-    free_space = block_size * free_blocks
+    #Initializations-----------------------------------------------
+    #Initialize weather look parameters
+    weather_api_key = mySecrets.myWeatherAPI
+    lat = mySecrets.lat
+    lon = mySecrets.lon
 
-    return free_space
+    #Initialize OTA
+    firmware_url = "github.com/repos/afarzin1/uPython_ColdPlungeTank"
+    ota_updater = OTAUpdater("coldPlungeTank",firmware_url, "main.py")
 
-def get_current_ambient_temperature(api_key, lat, lon):
-    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
-    response = urequests.get(url)
-    #time.sleep(2)
-    if response.status_code == 200:
-        data = json.loads(response.text)
-        current_temperature = data['main']['feels_like']
-        data = ""
-        response = ""
-        return current_temperature
-    else:
-        return f"Error: {response.status_code}"
+    #Init WIFI
+    picodebug.logPrint("Initializing WIFI",OutputToConsole,OutputToFile)
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    ssid = mySecrets.mySSID
+    password = mySecrets.myWifiPassword
 
-def calculate_ice_packs(T_initial, T_final):
-    m_water = 184955  # mass of 48.85 gallons of water in grams
-    c = 7.18  # specific heat capacity of water in J/g°C
-    Lf = 300  # heat of fusion for water in J/g
-    m_ice_pack = 2600  # mass of one ice pack in grams
-
-    E_needed = m_water * c * (T_initial - T_final)
-    E_ice_pack = m_ice_pack * (Lf + c * T_final)
-
-    N = E_needed / E_ice_pack
-    N = math.ceil(N)  # Round up to the nearest whole number
-    return N
-
-def GetBatSoc():
-    global hasUPS
+    #Init UPS
+    # Create an ADS1115 ADC (16-bit) instance.
     if hasUPS:
-        bus_voltage = UPS.getBusVoltage_V()             # voltage on V- (load side)
-        current = UPS.getCurrent_mA()                   # current in mA
-        P = (bus_voltage -3)/1.2*100
-        if(P<0):P=0
-        elif(P>100):P=100
-        return P
-    else:
-        return 1.11
+        UPS = UPS.INA219(addr=0x43)
 
-def PeakHoursNow(startHour, EndHour):
-    rawTime = machine.RTC().datetime()
-    hour = rawTime[4]
-    if (hour >= startHour) and (hour < EndHour):
-        return 1
-    else:
-        return 0
-  
-def CheckRemoteCommands():
-    global remoteCommand, ver, CycleLoopCounter, remoteTerminal
-    if remoteCommand == "Update":
-        remoteTerminal = GetTimestamp() + "Remote update requested"
-        firmware_update()
-    if remoteCommand == "Peakhours_auto":
-        remoteTerminal = GetTimestamp() + "Setting peak hours to AUTO"
-        peakHours_RemoteCommand()
-        remoteCommand = ""
-    if remoteCommand == "Peakhours_on":
-        remoteTerminal = GetTimestamp() + "Setting peak hours to ON"
-        peakHours_RemoteCommand()
-        remoteCommand = ""
+    def ConnectWifi(printIP):
+
+        attemptCounter = 0
         
-    if remoteCommand == "Peakhours_off":
-        remoteTerminal = GetTimestamp() + "Setting peak hours to OFF"
-        peakHours_RemoteCommand()
-        remoteCommand = ""
+        if not wlan.isconnected():
+            while not wlan.isconnected():
+                if attemptCounter == 5:
+                    picodebug.logPrint("Wifi not connecting, rebooting...",OutputToConsole,OutputToFile)
+                    machine.reset()
+                print("Trying to connect...")
+                wlan.connect(ssid, password)
+                pin.toggle()
+                attemptCounter += 1
+                time.sleep(3)
+        if wlan.isconnected():
+                
+            status = wlan.ifconfig()
+            if printIP:
+                print("Connected to Wifi")
+                print( 'ip = ' + status[0] )
+
+    def get_uptime():
+        # Get the current uptime in milliseconds
+        uptime_ms = time.ticks_ms()
         
-    if remoteCommand == "Reset":
-        remoteTerminal = GetTimestamp() + "Remote reset requested"
-        remoteCommand = ""
-        machine.reset()
-    if remoteCommand == "Soft_reset":
-        remoteTerminal = GetTimestamp() + "Remote soft reset requested"
-        remoteCommand = ""
-        machine.soft_reset()
-    if remoteCommand == "Ver":
-        remoteTerminal = GetTimestamp() + "App version: " + ver
-        remoteCommand = ""
+        # Calculate hours, minutes, and seconds
+        uptime_s = uptime_ms // 1000
+        hours = uptime_s // 3600
+        minutes = (uptime_s % 3600) // 60
+        seconds = uptime_s % 60
         
-    if remoteCommand == "Ping":
-        remoteTerminal = GetTimestamp() + "Cycle counter:" + str(CycleLoopCounter)
-        remoteCommand = ""
+        return "{}:{}:{}".format(hours, minutes, seconds)
+
+    def get_uptime_minutes():
+        # Get the current uptime in milliseconds
+        uptime_ms = time.ticks_ms()
         
+        # Calculate hours, minutes, and seconds
+        uptime_s = uptime_ms // 1000
+        minutes = (uptime_s % 3600) // 60
 
-def scale_turbidity(value, input_min=0, input_max=1.8, output_min=0, output_max=100):
-    scaled_value = ((value - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
-    return scaled_value
+        return minutes
 
-def peakHours_RemoteCommand():
-    global remoteCommand, cmdPeakHours_Auto, cmdPeakHours_OFF, cmdPeakHours_ON
-    if remoteCommand == "Peakhours_auto":
-        picodebug.logPrint("Peak hour control in auto",OutputToConsole,OutputToFile)
-        cmdPeakHours_Auto = True
-        cmdPeakHours_OFF = False
-        cmdPeakHours_ON = False
+    def is_dst(time_tuple):
+        # DST starts on the second Sunday in March
+        dst_start = time.mktime((time_tuple[0], 3, 8, 2, 0, 0, 0, 0))
+        # DST ends on the first Sunday in November
+        dst_end = time.mktime((time_tuple[0], 11, 1, 2, 0, 0, 0, 0))
         
-    if remoteCommand == "Peakhours_on":
-        picodebug.logPrint("Peak hours forced on",OutputToConsole,OutputToFile)
-        cmdPeakHours_ON = True
-        cmdPeakHours_OFF = False
-        cmdPeakHours_Auto = False
+        # Find the actual DST start and end times for the current year
+        while time.localtime(dst_start)[6] != 6:  # Sunday
+            dst_start += 86400  # Add one day
+        while time.localtime(dst_end)[6] != 6:  # Sunday
+            dst_end += 86400  # Add one day
         
-    if remoteCommand == "Peakhours_off":
-        picodebug.logPrint("Peak hours forced off",OutputToConsole,OutputToFile)
-        cmdPeakHours_OFF = True
-        cmdPeakHours_ON = False
-        cmdPeakHours_Auto = False
-
-#Boot-Loop------------------------------------------------------
-#Connect to Wifi
-picodebug.logPrint("Initial Wifi call",OutputToConsole,OutputToFile)
-try:
-    ConnectWifi(1)
-except:
-    machine.reset()
-
-#Update RTC to actual time
-picodebug.logPrint("Updating clock",OutputToConsole,OutputToFile)
-try:
-    if get_worldTime():
-        picodebug.logPrint("Clock updated",OutputToConsole,OutputToFile)
-except:
-    picodebug.logPrint("Failed to update clock",OutputToConsole,OutputToFile)
-    machine.reset()
-
-#Get system resources
-batterySoC = GetBatSoc()
-FreeMem = gc.mem_free() / 1000
-FreeSpace = GetFreeSpace() / 1000
-
-#Write version to remote terminal
-remoteTerminal = GetTimestamp() +" Booting up v" + ver
-
-#Initialize Blynk------------------------------------------------
-picodebug.logPrint("Initialize Blynk",OutputToConsole,OutputToFile)
-blynk = blynklib.Blynk(BLYNK_AUTH)
-def firmware_update():
-    global remoteCommand
-    picodebug.logPrint("Update requested",OutputToConsole,OutputToFile)
-    if ota_updater.check_for_updates():
-        ota_updater.fetch_latest_code()
-        ota_updater.update_no_reset()
-        #Reset remote command
-        remoteCommand = ""
-        ota_updater.update_and_reset()
-    else:
-        picodebug.logPrint("No updates available",OutputToConsole,OutputToFile)
-        remoteCommand = ""
-
-@blynk.on("V*")
-def read_handler(pin, value):
-    picodebug.logPrint("Blynk read handler called",OutputToConsole,OutputToFile)
-    global icepacks_added, waterSetpoint, number_of_ice_packs, remoteCommand
-
-    if pin == '2':
-        icepacks_added = value[0]
-
-    if pin == '3':
-        number_of_ice_packs = value[0]
+        current_time_seconds = time.mktime(time_tuple)
         
-    if pin == '6':
-        waterSetpoint = value[0]
+        return current_time_seconds >= dst_start and current_time_seconds < dst_end
 
-    if pin =='11':
-        remoteCommand = value[0]
+    def get_worldTime():
+        ntptime.host = 'pool.ntp.org'
         
-#Sync values from Server
-try:
-    i=0
-    while i < 2:
-        blynk.sync_virtual(2)
-        blynk.run()
-        time.sleep(0.5)
-        blynk.sync_virtual(3)
-        blynk.run()
-        time.sleep(0.5)
-        blynk.sync_virtual(6)
-        blynk.run()
-        time.sleep(0.5)
-        blynk.sync_virtual(5)
-        blynk.run()
-        time.sleep(0.5)
-        blynk.sync_virtual(11)
-        blynk.run()
-        time.sleep(0.5)
-        gc.collect()
-        i +=1
-except:
-    picodebug.logPrint("Initial blynk read failed",OutputToConsole,OutputToFile)
-    machine.reset()
+        try:
+            ntptime.settime()
 
-#Main loop ------------------------------------------------------
-picodebug.logPrint("Entering main loop",OutputToConsole,OutputToFile)
+            # Initialize RTC
+            rtc = machine.RTC()
 
-while True:
+            # Get the updated time
+            current_time = time.localtime()
+
+            # Convert to PST (UTC - 8 hours) or PDT (UTC - 7 hours)
+            offset = -28800  # PST: 8 hours * 60 minutes/hour * 60 seconds/minute
+            if is_dst(current_time):
+                offset += 3600  # Add 1 hour for Daylight Saving Time
+
+            pst_time = time.mktime(current_time) + offset
+            pst_time = time.localtime(pst_time)
+
+            # Set the RTC time
+            rtc.datetime((pst_time[0], pst_time[1], pst_time[2], pst_time[6], pst_time[3], pst_time[4], pst_time[5], 0))
+            time.sleep(1)
+            return 1
+        except:
+            return 0
+
+    def GetTimestamp():
+        rawTime = machine.RTC().datetime()
+        print(rawTime)
+        timeStamp = str(rawTime[0]) + '-' + str(rawTime[1]) + '-' + str(rawTime[2]) + ' ' + str(rawTime[4]) + ':' + str(rawTime[5]) + ':' + str(rawTime[6]) + " "
+        return timeStamp
+
+    def GetFreeSpace():
+        # Get the status of the file system
+        stat = os.statvfs('/')
+
+        # Calculate the available space
+        block_size = stat[0]  # Size of a block
+        total_blocks = stat[2]  # Total data blocks in the file system
+        free_blocks = stat[3]  # Free blocks in the file system
+
+        # Calculate total and free space in bytes
+        total_space = block_size * total_blocks
+        free_space = block_size * free_blocks
+
+        return free_space
+
+    def get_current_ambient_temperature(api_key, lat, lon):
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
+        response = urequests.get(url)
+        #time.sleep(2)
+        if response.status_code == 200:
+            data = json.loads(response.text)
+            current_temperature = data['main']['feels_like']
+            data = ""
+            response = ""
+            return current_temperature
+        else:
+            return f"Error: {response.status_code}"
+
+    def calculate_ice_packs(T_initial, T_final):
+        m_water = 184955  # mass of 48.85 gallons of water in grams
+        c = 7.18  # specific heat capacity of water in J/g°C
+        Lf = 300  # heat of fusion for water in J/g
+        m_ice_pack = 2600  # mass of one ice pack in grams
+
+        E_needed = m_water * c * (T_initial - T_final)
+        E_ice_pack = m_ice_pack * (Lf + c * T_final)
+
+        N = E_needed / E_ice_pack
+        N = math.ceil(N)  # Round up to the nearest whole number
+        return N
+
+    def GetBatSoc():
+        global hasUPS
+        if hasUPS:
+            bus_voltage = UPS.getBusVoltage_V()             # voltage on V- (load side)
+            current = UPS.getCurrent_mA()                   # current in mA
+            P = (bus_voltage -3)/1.2*100
+            if(P<0):P=0
+            elif(P>100):P=100
+            return P
+        else:
+            return 1.11
+
+    def PeakHoursNow(startHour, EndHour):
+        rawTime = machine.RTC().datetime()
+        hour = rawTime[4]
+        if (hour >= startHour) and (hour < EndHour):
+            return 1
+        else:
+            return 0
+    
+    def CheckRemoteCommands():
+        global remoteCommand, ver, CycleLoopCounter, remoteTerminal
+        if remoteCommand == "Update":
+            remoteTerminal = GetTimestamp() + "Remote update requested"
+            firmware_update()
+        if remoteCommand == "Peakhours_auto":
+            remoteTerminal = GetTimestamp() + "Setting peak hours to AUTO"
+            peakHours_RemoteCommand()
+            remoteCommand = ""
+        if remoteCommand == "Peakhours_on":
+            remoteTerminal = GetTimestamp() + "Setting peak hours to ON"
+            peakHours_RemoteCommand()
+            remoteCommand = ""
+            
+        if remoteCommand == "Peakhours_off":
+            remoteTerminal = GetTimestamp() + "Setting peak hours to OFF"
+            peakHours_RemoteCommand()
+            remoteCommand = ""
+            
+        if remoteCommand == "Reset":
+            remoteTerminal = GetTimestamp() + "Remote reset requested"
+            remoteCommand = ""
+            machine.reset()
+        if remoteCommand == "Soft_reset":
+            remoteTerminal = GetTimestamp() + "Remote soft reset requested"
+            remoteCommand = ""
+            machine.soft_reset()
+        if remoteCommand == "Ver":
+            remoteTerminal = GetTimestamp() + "App version: " + ver
+            remoteCommand = ""
+            
+        if remoteCommand == "Ping":
+            remoteTerminal = GetTimestamp() + "Cycle counter:" + str(CycleLoopCounter)
+            remoteCommand = ""
+            
+
+    def scale_analog(value, input_min=0, input_max=3.3, output_min=0, output_max=100):
+        scaled_value = ((value - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
+        return scaled_value
+
+    def peakHours_RemoteCommand():
+        global remoteCommand, cmdPeakHours_Auto, cmdPeakHours_OFF, cmdPeakHours_ON
+        if remoteCommand == "Peakhours_auto":
+            picodebug.logPrint("Peak hour control in auto",OutputToConsole,OutputToFile)
+            cmdPeakHours_Auto = True
+            cmdPeakHours_OFF = False
+            cmdPeakHours_ON = False
+            
+        if remoteCommand == "Peakhours_on":
+            picodebug.logPrint("Peak hours forced on",OutputToConsole,OutputToFile)
+            cmdPeakHours_ON = True
+            cmdPeakHours_OFF = False
+            cmdPeakHours_Auto = False
+            
+        if remoteCommand == "Peakhours_off":
+            picodebug.logPrint("Peak hours forced off",OutputToConsole,OutputToFile)
+            cmdPeakHours_OFF = True
+            cmdPeakHours_ON = False
+            cmdPeakHours_Auto = False
+
+    #Boot-Loop------------------------------------------------------
+    #Connect to Wifi
+    picodebug.logPrint("Initial Wifi call",OutputToConsole,OutputToFile)
     try:
+        ConnectWifi(1)
+    except:
+        machine.reset()
+
+    #Update RTC to actual time
+    picodebug.logPrint("Updating clock",OutputToConsole,OutputToFile)
+    try:
+        if get_worldTime():
+            picodebug.logPrint("Clock updated",OutputToConsole,OutputToFile)
+    except:
+        picodebug.logPrint("Failed to update clock",OutputToConsole,OutputToFile)
+        machine.reset()
+
+    #Get system resources
+    batterySoC = GetBatSoc()
+    FreeMem = gc.mem_free() / 1000
+    FreeSpace = GetFreeSpace() / 1000
+
+    #Write version to remote terminal
+    remoteTerminal = GetTimestamp() +" Booting up v" + ver
+
+    #Initialize Blynk------------------------------------------------
+    picodebug.logPrint("Initialize Blynk",OutputToConsole,OutputToFile)
+    blynk = blynklib.Blynk(BLYNK_AUTH)
+    def firmware_update():
+        global remoteCommand
+        picodebug.logPrint("Update requested",OutputToConsole,OutputToFile)
+        if ota_updater.check_for_updates():
+            ota_updater.fetch_latest_code()
+            ota_updater.update_no_reset()
+            #Reset remote command
+            remoteCommand = ""
+            ota_updater.update_and_reset()
+        else:
+            picodebug.logPrint("No updates available",OutputToConsole,OutputToFile)
+            remoteCommand = ""
+
+    @blynk.on("V*")
+    def read_handler(pin, value):
+        picodebug.logPrint("Blynk read handler called",OutputToConsole,OutputToFile)
+        global icepacks_added, waterSetpoint, number_of_ice_packs, remoteCommand
+
+        if pin == '2':
+            icepacks_added = value[0]
+
+        if pin == '3':
+            number_of_ice_packs = value[0]
+            
+        if pin == '6':
+            waterSetpoint = value[0]
+
+        if pin =='11':
+            remoteCommand = value[0]
+            
+    #Sync values from Server
+    try:
+        i=0
+        while i < 2:
+            blynk.sync_virtual(2)
+            blynk.run()
+            time.sleep(0.5)
+            blynk.sync_virtual(3)
+            blynk.run()
+            time.sleep(0.5)
+            blynk.sync_virtual(6)
+            blynk.run()
+            time.sleep(0.5)
+            blynk.sync_virtual(5)
+            blynk.run()
+            time.sleep(0.5)
+            blynk.sync_virtual(11)
+            blynk.run()
+            time.sleep(0.5)
+            gc.collect()
+            i +=1
+    except:
+        picodebug.logPrint("Initial blynk read failed",OutputToConsole,OutputToFile)
+        machine.reset()
+
+    #Main loop ------------------------------------------------------
+    picodebug.logPrint("Entering main loop",OutputToConsole,OutputToFile)
+
+    while True:
+        #try:
         gc.collect()      
         #Main process ----------------------------------------------
         picodebug.logPrint("Check wifi",OutputToConsole,OutputToFile)
@@ -438,7 +441,13 @@ while True:
         #Read turbidity sensor
         turbdity_sensor = machine.ADC(0)
         turb_reading = turbdity_sensor.read_u16() * conversion_factor 
-        turbidity_scaled = scale_turbidity(turb_reading)
+        turbidity_scaled = scale_analog(turb_reading,0,1.8,0,100)
+        
+        #Read TDS sensor:
+        TDS_sensor = machine.ADC(2)
+        TDS_reading = TDS_sensor.read_u16() * conversion_factor
+        TDS_scaled = scale_analog(TDS_reading,0,2.3,0,1000)
+        
         
         #Calcualte number of ice packs needed
         if waterSetpoint != '':
@@ -526,7 +535,7 @@ while True:
             CycleLoopCounter = 0
         
         gc.collect()
-          
+            
         #Write outputs to blynk
         picodebug.logPrint("Write Blynk outputs",OutputToConsole,OutputToFile)
         blynk.virtual_write(0, ambient_temperature)
@@ -537,6 +546,7 @@ while True:
         blynk.virtual_write(8, FreeSpace)
         blynk.virtual_write(9, turbidity_scaled)
         blynk.virtual_write(10, batterySoC)
+        blynk.virtual_write(12, TDS_scaled)
             
         picodebug.logPrint("Run Blynk",OutputToConsole,OutputToFile)
         blynk.run()
@@ -555,5 +565,5 @@ while True:
         picodebug.logPrint("Free space: {}".format(FreeSpace),OutputToConsole,OutputToFile)
         
         time.sleep(1)
-    except:
-        machine.reset()
+except:
+    machine.reset()
