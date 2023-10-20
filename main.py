@@ -7,7 +7,7 @@ try:
     time.sleep(5)
 
     #Board config----------------------------------------------
-    ver="2.8"
+    ver="2.8.1"
     devMode = False
     hasUPS = True
     OutputToConsole = False
@@ -441,12 +441,12 @@ try:
         #Read turbidity sensor
         turbdity_sensor = machine.ADC(0)
         turb_reading = turbdity_sensor.read_u16() * conversion_factor 
-        turbidity_scaled = scale_analog(turb_reading,0,1.9,0,100)
+        turbidity_scaled = scale_analog(turb_reading,0,2.0,0,100)
         
         #Read TDS sensor:
         TDS_sensor = machine.ADC(2)
         TDS_reading = TDS_sensor.read_u16() * conversion_factor
-        TDS_scaled = scale_analog(TDS_reading,0,2.3,0,1000)
+        TDS_scaled = scale_analog(TDS_reading,0,3.3,0,1000)
         
         
         #Calcualte number of ice packs needed
