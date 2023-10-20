@@ -7,7 +7,7 @@ try:
     time.sleep(5)
 
     #Board config----------------------------------------------
-    ver="2.7"
+    ver="2.8"
     devMode = False
     hasUPS = True
     OutputToConsole = False
@@ -441,7 +441,7 @@ try:
         #Read turbidity sensor
         turbdity_sensor = machine.ADC(0)
         turb_reading = turbdity_sensor.read_u16() * conversion_factor 
-        turbidity_scaled = scale_analog(turb_reading,0,1.8,0,100)
+        turbidity_scaled = scale_analog(turb_reading,0,1.9,0,100)
         
         #Read TDS sensor:
         TDS_sensor = machine.ADC(2)
